@@ -24,6 +24,11 @@ def main(argv=None):
         from .check import main as check_main
 
         return check_main(rest)
+    if cmd in ("export", "import"):
+        from .transfer import main as transfer_main
+
+        # transfer.main takes the subcommand as argv[0], like train.main does
+        return transfer_main([cmd, *rest])
     if cmd in ("help", "-h", "--help"):
         print(
             """
@@ -35,9 +40,16 @@ signlang - real-time ASL fingerspelling and word-sign translator
   signlang cameras    list detected video devices
   signlang check      verify a video source works (fps + hand detection)
   signlang assess     evaluate the trained model
+  signlang export     package recordings + model to move to another machine
+  signlang import     merge a bundle from another machine
 
 Collect first, then train, then live. Nothing is shipped pre-trained:
 the model learns your hand, your angle, and your lighting.
+
+Moving between machines (e.g. train on a fast laptop, demo on another):
+  signlang export            writes signlang-transfer.tar.gz
+  <copy it>                  transfer recordings + trained model
+  signlang import            merges it into the other project
 
 Environment:
   SIGNLANG_SOURCE=http://ip:8080/video   any OpenCV-readable source (incl. HTTP MJPEG)

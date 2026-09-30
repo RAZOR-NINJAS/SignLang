@@ -19,6 +19,9 @@ models/hand_landmarker.task
 # recorded training data - personal, never commit
 data/samples/
 
+# bundles made by `signlang export` contain the same recordings
+signlang-transfer*.tar.gz
+
 # onnx tts voice (downloaded separately, see README)
 en_US-lessac-medium.onnx
 en_US-lessac-medium.onnx.json

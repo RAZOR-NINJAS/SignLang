@@ -75,6 +75,48 @@ $env:SIGNLANG_CAMERA = "1"
 The download step fetches the MediaPipe hand landmarker (~7.8 MB) into
 `models/`. It is the only prerequisite that pip does not install.
 
+## Moving between machines
+
+Useful when you want to train on a faster laptop than the one you demo on. A
+bundle carries your recordings and, unless you say otherwise, the trained
+model.
+
+```bash
+signlang export                  # writes signlang-transfer.tar.gz
+```
+
+Copy that file over (USB stick, network share, email — it is under 1 MB) and on
+the other machine:
+
+```bash
+signlang import                  # merges it into this project
+```
+
+The import **appends** recordings rather than replacing them, so you can pool
+data from several machines and train once on the lot. Importing the same
+bundle twice will double your counts, so keep one copy per machine.
+
+Useful flags:
+
+```bash
+signlang export --no-model            # recordings only, leave weights behind
+signlang export --out=backup.tar.gz   # write somewhere specific
+signlang import --dry-run             # list what is in it, write nothing
+signlang import --from=backup.tar.gz  # import a bundle not in the project root
+```
+
+What travels: `data/samples/*.npy` (including the `.sources.npy` sidecars) and
+`models/signs_mlp.pt` + `models/labels.json`.
+
+What does **not**: the hand landmarker. It is 7.8 MB of a fixed third-party
+file, so both machines fetch it with `scripts/fetch_models.sh` (or
+`fetch_models.py` on Windows). If a bundle somehow contains one, import skips
+it and says so.
+
+Samples are normalised landmark coordinates, not images, so a bundle is small
+and nothing photographic is shared. They are also already wrist-centred and
+palm-scaled, which is what lets them transfer between different cameras.
+
 ## Quick start
 
 The order matters: record samples, train on them, then recognise.
@@ -190,6 +232,14 @@ your hand is still moving.
 
 The dwell timer is wall-clock based and runs on every captured frame, so frame
 rate affects responsiveness but not what gets recognised.
+
+**Recognition is worse on the exhibition laptop than on my own.** The model
+learns your hand shape to some degree. Collect a few extra bursts on that
+machine's camera, import them on the training machine, and retrain.
+
+**Model recognises only some letters.** It can only predict signs present at
+training time. `cat models/labels.json` shows what it knows. Collect the
+missing ones and retrain.
 
 ## Troubleshooting
 
