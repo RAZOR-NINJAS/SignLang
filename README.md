@@ -7,15 +7,10 @@ the classifier learns *your* hand, your angle, and your lighting.
 MediaPipe supplies 21 hand landmarks per frame, a small MLP classifies them into
 a sign, and a dwell timer turns a held sign into a character.
 
-## Requirements
-
-- Python 3.11 or newer
-- A webcam
-- Linux, macOS, or Windows
-
 ## Install
 
-### Linux / macOS
+<details open>
+<summary><b>Linux / macOS</b></summary>
 
 ```bash
 git clone https://github.com/vaibhavsingh-shekhawat/signlang.git
@@ -26,9 +21,10 @@ pip install -e .
 bash scripts/fetch_models.sh
 ```
 
-### Windows
+</details>
 
-PowerShell, from the repo root:
+<details>
+<summary><b>Windows (PowerShell)</b></summary>
 
 ```powershell
 git clone https://github.com/vaibhavsingh-shekhawat/signlang.git
@@ -38,6 +34,27 @@ py -3.11 -m venv .venv
 pip install -e .
 python scripts\fetch_models.py
 ```
+
+</details>
+
+Then record, train, and recognise:
+
+```bash
+signlang collect
+signlang train
+signlang live
+```
+
+## Requirements
+
+- Python 3.11 or newer
+- A webcam
+- Linux, macOS, or Windows
+
+## More install detail
+
+The commands at the top of this page are all you need. Notes on the pieces that
+catch people out:
 
 `scripts\fetch_models.py` is the Windows equivalent of `fetch_models.sh` and
 uses only the standard library, so it runs before `pip install` if you prefer
