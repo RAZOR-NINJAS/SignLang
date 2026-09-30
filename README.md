@@ -1,8 +1,12 @@
 # SignLang
 
 Real-time ASL fingerspelling and word-sign recognition from your webcam, running
-locally on CPU. Nothing leaves your machine and no model is shipped pre-trained:
-the classifier learns *your* hand, your angle, and your lighting.
+locally on CPU. Nothing leaves your machine.
+
+A trained model and its recordings are included, so you can run `signlang live`
+straight away. It recognises **A-H and K-N** and was trained on one person's
+hands, so it will be less accurate on yours. Retrain it on your own signs for
+the best results.
 
 MediaPipe supplies 21 hand landmarks per frame, a small MLP classifies them into
 a sign, and a dwell timer turns a held sign into a character.
@@ -37,7 +41,13 @@ python scripts\fetch_models.py
 
 </details>
 
-Then record, train, and recognise:
+Then try it immediately with the bundled model:
+
+```bash
+signlang live
+```
+
+Or retrain on your own hands:
 
 ```bash
 signlang collect
@@ -119,7 +129,14 @@ palm-scaled, which is what lets them transfer between different cameras.
 
 ## Quick start
 
-The order matters: record samples, train on them, then recognise.
+A trained model covering A-H and K-N ships with the repo. If you just want to
+see it work:
+
+```bash
+signlang live
+```
+
+To make it yours, record samples and retrain. The order matters:
 
 ```bash
 signlang collect    # 1. record training samples
@@ -273,18 +290,26 @@ when the console window itself has focus.
 ```
 data/samples/A.npy          recorded landmarks for sign A
 data/samples/A.sources.npy  which camera each sample came from
-models/signs_mlp.pt         trained weights (not committed)
+models/signs_mlp.pt         trained weights (included)
+models/labels.json          the signs the weights can predict (included)
 models/hand_landmarker.task MediaPipe landmarker (fetched by script)
 scripts/fetch_models.py     the download step for Windows
 ```
 
-Recordings are plain NumPy arrays, so they are easy to back up, copy between
-machines, or inspect:
+The recordings and the model are committed, so a clone comes with a working
+recogniser. The recordings are 63 float coordinates per frame, wrist-centred and
+palm-scaled, not images, so nothing photographic is shared.
+
+Recordings are plain NumPy arrays, so they are easy to inspect or extend:
 
 ```python
 import numpy as np
-a = np.load("data/samples/A.npy")     # shape: (n_samples, 63)
+a = np.load("data/samples/A.npy")     # shape: (n_samples, 21, 3)
 ```
+
+The bundled model covers **A, B, C, D, E, F, G, H, K, L, M, N** from 3906
+samples. Sample counts are uneven (112 for the thinnest signs, 672 for the
+thickest); training weights by class to compensate.
 
 `.npy` arrays hold normalised landmark vectors, not images, so recordings are
 small and no photographs of your hand are stored.

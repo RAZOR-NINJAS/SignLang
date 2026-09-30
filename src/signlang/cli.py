@@ -43,8 +43,9 @@ signlang - real-time ASL fingerspelling and word-sign translator
   signlang export     package recordings + model to move to another machine
   signlang import     merge a bundle from another machine
 
-Collect first, then train, then live. Nothing is shipped pre-trained:
-the model learns your hand, your angle, and your lighting.
+Collect, train, then live. A model for A-H and K-N ships with the repo, but it
+was trained on someone else's hands: collect your own samples and retrain for
+the best accuracy.
 
 Moving between machines (e.g. train on a fast laptop, demo on another):
   signlang export            writes signlang-transfer.tar.gz
