@@ -1,3 +1,5 @@
+import sys
+
 import cv2
 
 from .config import (
@@ -37,20 +39,26 @@ def main():
         print("  no working cameras found")
         return 1
     print()
-    for i, w, h in devs:
-        mark = "  <-- active" if i == CAMERA_INDEX else ""
-        print(f"  /dev/video{i:<2d}  {w}x{h}{mark}")
+    if sys.platform == "win32":
+        for i, w, h in devs:
+            mark = "  <-- active" if i == CAMERA_INDEX else ""
+            print(f"  camera {i}       {w}x{h}{mark}")
+    else:
+        for i, w, h in devs:
+            mark = "  <-- active" if i == CAMERA_INDEX else ""
+            print(f"  /dev/video{i:<2d}  {w}x{h}{mark}")
     print()
     print(f"  detect height : {DETECT_HEIGHT}px (landmark accuracy scales with this)")
     print(f"  mirror        : {MIRROR}")
     print()
-    print("  switch camera:  SIGNLANG_CAMERA=2 .venv/bin/signlang collect")
-    print("  use more res :  SIGNLANG_DETECT_HEIGHT=720 .venv/bin/signlang collect")
+    print("  switch camera:  SIGNLANG_CAMERA=2 signlang collect")
+    print("  use more res :  SIGNLANG_DETECT_HEIGHT=720 signlang collect")
     if len(devs) < 2:
         print()
         print("  only one camera found. to add a phone as a webcam, either:")
-        print("    - USB tether + 'PTP' camera over gphoto2 / gtkam")
         print("    - DroidCam / IP Webcam on the LAN (set SIGNLANG_CAMERA to its index)")
+        if sys.platform != "win32":
+            print("    - USB tether + 'PTP' camera over gphoto2 / gtkam")
         print("    - a capture card if the phone outputs HDMI")
     return 0
 

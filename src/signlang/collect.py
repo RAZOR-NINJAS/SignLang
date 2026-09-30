@@ -3,6 +3,9 @@ import shutil
 import sys
 import time
 
+if sys.platform == "win32":  # select() only accepts sockets on Windows
+    import msvcrt
+
 import cv2
 import numpy as np
 
@@ -21,9 +24,17 @@ BAR_H = 150
 
 
 def poll_stdin_keys():
+    """Read keys typed in the terminal, without blocking.
+
+    Windows cannot select() on stdin, so it uses the msvcrt console API.
+    """
     keys = []
     try:
-        if not (sys.stdin is not None and sys.stdin.isatty()):
+        if sys.stdin is None or not sys.stdin.isatty():
+            return keys
+        if sys.platform == "win32":
+            while msvcrt.kbhit():
+                keys.append(msvcrt.getwche())
             return keys
         while select.select([sys.stdin], [], [], 0)[0]:
             ch = sys.stdin.read(1)

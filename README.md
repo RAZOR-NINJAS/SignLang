@@ -15,17 +15,48 @@ a sign, and a dwell timer turns a held sign into a character.
 
 ## Install
 
+### Linux / macOS
+
 ```bash
 git clone https://github.com/vaibhavsingh-shekhawat/signlang.git
 cd signlang
 python3 -m venv .venv
-source .venv/bin/activate        # Windows: .venv\Scripts\activate
+source .venv/bin/activate
 pip install -e .
-bash scripts/fetch_models.sh    # Windows: use Git Bash or WSL
+bash scripts/fetch_models.sh
 ```
 
-`fetch_models.sh` downloads the MediaPipe hand landmarker (~7.8 MB) into
-`models/`. It is the only prerequisite that is not installed by pip.
+### Windows
+
+PowerShell, from the repo root:
+
+```powershell
+git clone https://github.com/vaibhavsingh-shekhawat/signlang.git
+cd signlang
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e .
+python scripts\fetch_models.py
+```
+
+`scripts\fetch_models.py` is the Windows equivalent of `fetch_models.sh` and
+uses only the standard library, so it runs before `pip install` if you prefer
+that order. No Git Bash or WSL needed.
+
+If PowerShell blocks the activate script, either run the activation with
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, or skip activation
+and call `.\.venv\Scripts\python.exe -m signlang.cli live` instead.
+
+Setting the environment variables on Windows is the same as on Linux, but for
+one session:
+
+```powershell
+$env:SIGNLANG_CAMERA = "1"
+.\.venv\Scripts\python.exe -m signlang.cli live
+```
+
+The download step fetches the MediaPipe hand landmarker (~7.8 MB) into
+`models/`. It is the only prerequisite that pip does not install.
 
 ## Quick start
 
@@ -162,6 +193,14 @@ help much; it is already the dominant cost. Closing other CPU-heavy work helps.
 
 **Wrong camera.** `signlang cameras` lists indices, then set `SIGNLANG_CAMERA=1`.
 
+**Windows: keyboard shortcuts do nothing in `collect`.** You need to click the
+video window once so it has focus, then SPACE and the other keys work there.
+Terminal key reading uses the Windows console API and works as well, but only
+when the console window itself has focus.
+
+**Windows: camera opens but the image is black.** Another app is holding it
+(Teams, Zoom, Camera). Close those first.
+
 ## Data layout
 
 ```
@@ -169,6 +208,15 @@ data/samples/A.npy          recorded landmarks for sign A
 data/samples/A.sources.npy  which camera each sample came from
 models/signs_mlp.pt         trained weights (not committed)
 models/hand_landmarker.task MediaPipe landmarker (fetched by script)
+scripts/fetch_models.py     the download step for Windows
+```
+
+Recordings are plain NumPy arrays, so they are easy to back up, copy between
+machines, or inspect:
+
+```python
+import numpy as np
+a = np.load("data/samples/A.npy")     # shape: (n_samples, 63)
 ```
 
 `.npy` arrays hold normalised landmark vectors, not images, so recordings are

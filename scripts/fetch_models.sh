@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Downloads the MediaPipe hand landmarker into models/.
+# POSIX systems (Linux, macOS, WSL). On native Windows use fetch_models.py.
 # Idempotent: skips the file if it is already present.
 set -euo pipefail
 
