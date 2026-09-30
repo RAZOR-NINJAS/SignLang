@@ -307,9 +307,10 @@ import numpy as np
 a = np.load("data/samples/A.npy")     # shape: (n_samples, 21, 3)
 ```
 
-The bundled model covers **A, B, C, D, E, F, G, H, K, L, M, N** from 3906
-samples. Sample counts are uneven (112 for the thinnest signs, 672 for the
-thickest); training weights by class to compensate.
+The bundled model covers **A through Y, except Z** from 9170 samples. Sample
+counts are uneven (56 for the thinnest sign, 672 for the thickest); training
+weights by class to compensate. A 56-sample sign is only 4 recording bursts,
+which is too few to generalise reliably -- collect more before relying on it.
 
 `.npy` arrays hold normalised landmark vectors, not images, so recordings are
 small and no photographs of your hand are stored.
