@@ -1,0 +1,179 @@
+# SignLang
+
+Real-time ASL fingerspelling and word-sign recognition from your webcam, running
+locally on CPU. Nothing leaves your machine and no model is shipped pre-trained:
+the classifier learns *your* hand, your angle, and your lighting.
+
+MediaPipe supplies 21 hand landmarks per frame, a small MLP classifies them into
+a sign, and a dwell timer turns a held sign into a character.
+
+## Requirements
+
+- Python 3.11 or newer
+- A webcam
+- Linux, macOS, or Windows
+
+## Install
+
+```bash
+git clone https://github.com/vaibhavsingh-shekhawat/signlang.git
+cd signlang
+python3 -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -e .
+bash scripts/fetch_models.sh    # Windows: use Git Bash or WSL
+```
+
+`fetch_models.sh` downloads the MediaPipe hand landmarker (~7.8 MB) into
+`models/`. It is the only prerequisite that is not installed by pip.
+
+## Quick start
+
+The order matters: record samples, train on them, then recognise.
+
+```bash
+signlang collect    # 1. record training samples
+signlang train      # 2. train the classifier
+signlang live       # 3. recognise
+```
+
+### 1. Record samples
+
+```bash
+signlang collect
+```
+
+Hold each sign clearly in view and press **SPACE** to capture a burst. Aim for
+**4 bursts per sign**, varying position and angle slightly between them. Move
+through the alphabet with **N** / **B**, press **R** to clear a sign, **Q** to
+quit and save.
+
+Capture only the letters you want; the trainer uses whatever is present. To
+record a subset:
+
+```bash
+signlang collect --only=A,B,C,D,E
+```
+
+### 2. Train
+
+```bash
+signlang train
+```
+
+Writes `models/signs_mlp.pt` and `models/labels.json`. Useful flags:
+
+```bash
+signlang train --epochs=120 --lr=1e-3
+signlang train --no-augment     # disable rotation/scale jitter
+```
+
+Roughly **40+ samples per sign** is a practical floor. Fewer and the model will
+guess between similar letters (A and E especially).
+
+### 3. Recognise
+
+```bash
+signlang live
+```
+
+| Key | Action |
+| --- | --- |
+| hold a sign | appends the letter after the dwell time |
+| swipe **right** | space |
+| swipe **left** | delete last letter |
+| `C` | clear the transcript |
+| `Q` or `Esc` | quit |
+
+Tuning for your hand:
+
+```bash
+signlang live --dwell=450          # faster confirm, 200-2500 ms
+signlang live --sensitivity=0.4    # lower = more willing to accept
+```
+
+Lower `--dwell` if letters are being missed, raise it if they fire while you are
+still adjusting your hand.
+
+## Other commands
+
+```bash
+signlang cameras   # list detected video devices
+signlang check     # verify a source works: fps and hand detection rate
+```
+
+`signlang check` is the first thing to run when a sign will not detect. It
+reports frames per second and how often a hand was found.
+
+## Configuration
+
+All optional, via environment variables:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `SIGNLANG_CAMERA` | `0` | device index |
+| `SIGNLANG_SOURCE` | — | any OpenCV-readable source, overrides the index |
+| `SIGNLANG_WIDTH` / `SIGNLANG_HEIGHT` | `640` / `480` | capture size |
+| `SIGNLANG_DETECT_HEIGHT` | same as capture | landmark resolution |
+| `SIGNLANG_MIRROR` | `1` | set `0` to disable selfie mirroring |
+| `SIGNLANG_MAX_HANDS` | `1` | hands to track |
+
+An HTTP MJPEG source works too, which is useful for a phone pointed at yourself:
+
+```bash
+SIGNLANG_SOURCE=http://192.168.1.5:8080/video signlang live
+```
+
+## How it works
+
+```
+webcam -> HandPipeline (mirror, MediaPipe landmarks) -> 21x3 points
+       -> feature extraction + augmentation -> MLP -> sign + confidence
+       -> dwell timer -> transcript
+```
+
+Capture happens on a background thread with a small queue, so the newest frame
+always wins and a slow consumer cannot stall the camera.
+
+Recognition is deliberately **hold-to-confirm** rather than instant. A letter is
+only committed once the same sign has been the top prediction for the dwell
+window, which is what stops the output flickering between similar letters while
+your hand is still moving.
+
+The dwell timer is wall-clock based and runs on every captured frame, so frame
+rate affects responsiveness but not what gets recognised.
+
+## Troubleshooting
+
+**Nothing is detected.** Run `signlang check`. If it reports 0% hands while your
+hand is in frame, the problem is lighting or framing, not the model. Your hand
+should fill roughly a third of the view.
+
+**Letters come out wrong or flip between two options.** Not enough data. Collect
+more bursts for those signs and retrain. Confusable pairs: A/E, M/N, U/V/R.
+
+**Words render without spaces.** Each word sign (`HELLO`, `THANKYOU`, …) expands
+to its text and a trailing space; letter signs do not. Use a right swipe
+between letter groups.
+
+**Low frame rate.** Landmark detection costs roughly 90 ms per frame on a small
+CPU, capping the loop near 10 fps. Lowering `SIGNLANG_DETECT_HEIGHT` will not
+help much; it is already the dominant cost. Closing other CPU-heavy work helps.
+
+**Wrong camera.** `signlang cameras` lists indices, then set `SIGNLANG_CAMERA=1`.
+
+## Data layout
+
+```
+data/samples/A.npy          recorded landmarks for sign A
+data/samples/A.sources.npy  which camera each sample came from
+models/signs_mlp.pt         trained weights (not committed)
+models/hand_landmarker.task MediaPipe landmarker (fetched by script)
+```
+
+`.npy` arrays hold normalised landmark vectors, not images, so recordings are
+small and no photographs of your hand are stored.
+
+## License
+
+MIT
