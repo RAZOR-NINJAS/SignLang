@@ -195,9 +195,12 @@ signlang live
 Tuning for your hand:
 
 ```bash
-signlang live --dwell=450          # faster confirm, 200-2500 ms
+signlang live --dwell=1600          # slower confirm, 200-2500 ms
 signlang live --sensitivity=0.4    # lower = more willing to accept
 ```
+
+The default dwell is **1000ms**. The overlay shows the time remaining as a
+countdown (`0.7s`) plus a progress bar, so you can see how much longer to hold.
 
 Lower `--dwell` if letters are being missed, raise it if they fire while you are
 still adjusting your hand.

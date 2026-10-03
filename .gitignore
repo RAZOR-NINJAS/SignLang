@@ -30,3 +30,6 @@ en_US-lessac-medium.onnx.json
 .vscode/
 .idea/
 .DS_Store
+
+# local scratch: .bak copies and a stale model from before retraining
+backups/

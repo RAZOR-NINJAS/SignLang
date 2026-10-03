@@ -10,12 +10,11 @@ import cv2
 import numpy as np
 
 from . import dataset
-from .config import TRAIN_LABELS
+from .config import BURST_FRAMES, TRAIN_LABELS
 from .features import normalize_hand
 from .hands import HandPipeline, draw_landmarks
 
 BURSTS_PER_LABEL = 4
-BURST_FRAMES = 14
 MAX_BURST_MISSES = 4
 MIN_HAND_SCALE = 0.055
 WINDOW = "signlang - collect"

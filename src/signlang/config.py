@@ -51,6 +51,10 @@ WORD_GLOSS = {
 
 TRAIN_LABELS = LETTERS + WORDS
 
+# Frames captured per SPACE press. Samples land in runs of this many near-identical
+# frames, so any honest validation split must hold out whole runs -- see eval_burst.py.
+BURST_FRAMES = 14
+
 WRIST = 0
 THUMB_MCP, THUMB_IP, THUMB_TIP = 2, 3, 4
 INDEX_MCP, INDEX_PIP, INDEX_DIP, INDEX_TIP = 5, 6, 7, 8
@@ -80,7 +84,7 @@ MIRROR = os.environ.get("SIGNLANG_MIRROR", "1") not in ("0", "false", "False")
 MAX_HANDS = int(os.environ.get("SIGNLANG_MAX_HANDS", "1"))
 READ_TIMEOUT_S = float(os.environ.get("SIGNLANG_READ_TIMEOUT", "3.0"))
 
-DWELL_MS = 620
+DWELL_MS = 1000
 SMOOTH_MS = 420
 CONFIRM_THRESHOLD = 0.72
 STABLE_MARGIN = 0.18
