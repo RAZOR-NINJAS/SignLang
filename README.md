@@ -184,13 +184,21 @@ guess between similar letters (A and E especially).
 signlang live
 ```
 
-| Key | Action |
+| Action / Gesture | Effect |
 | --- | --- |
-| hold a sign | appends the letter after the dwell time |
+| hold a letter sign | appends the letter after the dwell time (~1.0s, triggers once per hold) |
+| hold **SPACE** gesture | appends exactly one space (open flat palm held ~0.8s, triggers once per hold) |
 | swipe **right** | space |
 | swipe **left** | delete last letter |
 | `C` | clear the transcript |
 | `Q` or `Esc` | quit |
+
+#### Custom SPACE Gesture & Debouncing
+
+- **Gesture**: Open flat palm with all 5 fingers extended and spread, palm facing the camera. This sign is distinct from fingerspelling letters (unlike 'B' where the thumb is folded across the palm, or '5' which is a number sign).
+- **Hold-Once Debouncing**: Holding SPACE triggers exactly one space character after ~0.8s (`SPACE_DWELL_MS`). Keeping the hand raised will **not** spam repeated spaces. The same hold-once debouncing applies to fingerspelled letters.
+- **Cooldown**: To append another space, release the hold (relax/lower hand) and wait for the cooldown (~900ms) before holding the gesture again.
+- **Recording SPACE samples**: Run `.venv/bin/python scripts/record_space.py --camera` to record from your webcam, or `--generate` to generate landmark samples.
 
 Tuning for your hand:
 
@@ -199,8 +207,8 @@ signlang live --dwell=1600          # slower confirm, 200-2500 ms
 signlang live --sensitivity=0.4    # lower = more willing to accept
 ```
 
-The default dwell is **1000ms**. The overlay shows the time remaining as a
-countdown (`0.7s`) plus a progress bar, so you can see how much longer to hold.
+The default dwell is **1000ms** for letters and **800ms** for SPACE. The overlay shows the time remaining as a
+countdown (`0.7s`) plus a circular progress ring, so you can see how much longer to hold. Once confirmed, the ring stays filled and will not re-trigger until released.
 
 Lower `--dwell` if letters are being missed, raise it if they fire while you are
 still adjusting your hand.

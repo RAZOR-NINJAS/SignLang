@@ -1,3 +1,4 @@
+import math
 import time
 from collections import deque
 
@@ -8,6 +9,8 @@ from .config import (
     DWELL_MS,
     REPEAT_COOLDOWN_MS,
     SMOOTH_MS,
+    SPACE_COOLDOWN_MS,
+    SPACE_DWELL_MS,
     STABLE_MARGIN,
     SWIPE_MAX_MS,
     SWIPE_MIN_PX,
@@ -22,16 +25,22 @@ def now_ms():
 
 class DwellRecognizer:
     def __init__(self, predictor, smooth_ms=SMOOTH_MS, dwell_ms=DWELL_MS,
-                 threshold=CONFIRM_THRESHOLD, margin=STABLE_MARGIN):
+                 threshold=CONFIRM_THRESHOLD, margin=STABLE_MARGIN,
+                 space_dwell_ms=SPACE_DWELL_MS,
+                 repeat_cooldown_ms=REPEAT_COOLDOWN_MS,
+                 space_cooldown_ms=SPACE_COOLDOWN_MS):
         self.predictor = predictor
         self.smooth_ms = smooth_ms
         self.dwell_ms = dwell_ms
         self.threshold = threshold
         self.margin = margin
+        self.space_dwell_ms = space_dwell_ms
+        self.repeat_cooldown_ms = repeat_cooldown_ms
+        self.space_cooldown_ms = space_cooldown_ms
 
         self.buffer = ""
         self._hist = deque()
-        self._trail = deque()
+        self._trail = deque(maxlen=128)
         self._candidate = None
         self._stable_since = None
         self._dwell_start = None
@@ -39,6 +48,10 @@ class DwellRecognizer:
         self._last_gesture = 0.0
         self._just_emitted = None
         self._just_emitted_at = 0.0
+        self._hold_emitted = False
+        self._unstable_since = None
+        self._none_since = None
+        self._last_emit_time = {}
 
     def reset(self):
         self.buffer = ""
@@ -48,6 +61,10 @@ class DwellRecognizer:
         self._stable_since = None
         self._dwell_start = None
         self._just_emitted = None
+        self._hold_emitted = False
+        self._unstable_since = None
+        self._none_since = None
+        self._last_emit_time.clear()
 
     def backspace(self):
         if self.buffer:
@@ -59,9 +76,16 @@ class DwellRecognizer:
         self._candidate = None
         self._dwell_start = None
         self._just_emitted = None
+        self._hold_emitted = False
+        self._unstable_since = None
+        self._none_since = None
+        self._last_emit_time.clear()
 
     def set_dwell(self, ms):
         self.dwell_ms = int(max(200, min(2500, ms)))
+
+    def set_space_dwell(self, ms):
+        self.space_dwell_ms = int(max(200, min(2500, ms)))
 
     def set_threshold(self, t):
         self.threshold = float(max(0.3, min(0.99, t)))
@@ -89,26 +113,54 @@ class DwellRecognizer:
             return "space"
         return "backspace"
 
-    def update(self, landmarks_norm, handedness, width, height):
-        t = now_ms()
+    def update(self, landmarks_norm, handedness, width, height, raw_landmarks=None, t_ms=None):
+        t = now_ms() if t_ms is None else float(t_ms)
         if landmarks_norm is None:
-            self._hist.clear()
-            self._trail.clear()
-            self._candidate = None
-            self._dwell_start = None
-            self._stable_since = None
+            if self._none_since is None:
+                self._none_since = t
+            # Genuine release when absent for >= 180ms
+            if t - self._none_since >= 180.0:
+                self._hist.clear()
+                self._trail.clear()
+                self._candidate = None
+                self._dwell_start = None
+                self._stable_since = None
+                self._hold_emitted = False
+                self._unstable_since = None
+            else:
+                self._dwell_start = None
             return {"gesture": None, "emitted": None, "gesture_ms": None}
 
+        if self._none_since is not None:
+            if t - self._none_since >= 180.0:
+                self._hist.clear()
+                self._trail.clear()
+                self._candidate = None
+                self._dwell_start = None
+                self._stable_since = None
+                self._hold_emitted = False
+                self._unstable_since = None
+            self._none_since = None
+
         norm = self.predictor.probs_from_landmarks(landmarks_norm)
-        wx = float(landmarks_norm[WRIST][0]) * width
-        wy = float(landmarks_norm[WRIST][1]) * height
+        if raw_landmarks is not None:
+            wx = float(raw_landmarks[WRIST][0]) * width
+            wy = float(raw_landmarks[WRIST][1]) * height
+        else:
+            wx = float(landmarks_norm[WRIST][0]) * width
+            wy = float(landmarks_norm[WRIST][1]) * height
 
         gesture = self._gesture(t, wx, wy)
         if gesture == "space":
             self.buffer += " "
+            self._last_emit = t
+            self._last_emit_time["SPACE"] = t
+            self._hold_emitted = True
             return {"gesture": "space", "emitted": " ", "gesture_ms": t}
         if gesture == "backspace":
             self.backspace()
+            self._last_emit = t
+            self._hold_emitted = True
             return {"gesture": "backspace", "emitted": None, "gesture_ms": t}
 
         self._hist.append((t, norm))
@@ -118,7 +170,7 @@ class DwellRecognizer:
         if len(self._hist) < 2:
             return self._status(None, 0.0, 0.0, t, None, None)
 
-        stack = np.stack([h[1] for h in self._hist])
+        stack = np.array([h[1] for h in self._hist], dtype=np.float32)
         mean = stack.mean(0)
         order = np.argsort(mean)[::-1]
         top_i = int(order[0])
@@ -132,23 +184,37 @@ class DwellRecognizer:
             self._candidate = label
             self._stable_since = t
             self._dwell_start = None
+            self._hold_emitted = False
+            self._unstable_since = None
         elif self._stable_since is None:
             self._stable_since = t
 
         moving = self._movement(200.0)
         confident = conf >= self.threshold and (conf - runner) >= self.margin * 0.5
+        is_stable_hold = stable and (moving <= 26.0) and confident
 
-        if not stable or moving > 26.0 or not confident:
+        if not is_stable_hold:
             self._dwell_start = None
-        elif self._dwell_start is None:
-            self._dwell_start = t
+            if self._unstable_since is None:
+                self._unstable_since = t
+            if moving > 40.0 or (t - self._unstable_since >= 150.0):
+                self._hold_emitted = False
         else:
-            if t - self._last_emit >= REPEAT_COOLDOWN_MS and t - self._dwell_start >= self.dwell_ms:
-                self._emit(label)
-                self._last_emit = t
+            self._unstable_since = None
+            if self._dwell_start is None:
                 self._dwell_start = t
-                self._just_emitted = label
-                self._just_emitted_at = t
+            elif not self._hold_emitted:
+                target_dwell = self.space_dwell_ms if label == "SPACE" else self.dwell_ms
+                cooldown = self.space_cooldown_ms if label == "SPACE" else self.repeat_cooldown_ms
+                last_label_emit = self._last_emit_time.get(label, 0.0)
+
+                if (t - self._dwell_start >= target_dwell) and (t - last_label_emit >= cooldown):
+                    self._emit(label)
+                    self._last_emit = t
+                    self._last_emit_time[label] = t
+                    self._hold_emitted = True
+                    self._just_emitted = " " if label == "SPACE" else label
+                    self._just_emitted_at = t
 
         return self._status(label, conf, runner, t, mean, order, moving, agreement)
 
@@ -156,22 +222,31 @@ class DwellRecognizer:
         if len(self._trail) < 2:
             return 0.0
         t, x, y = self._trail[-1]
-        prior = [p for p in self._trail if t - p[0] <= window_ms]
-        if len(prior) < 2:
-            return 0.0
-        x0, y0 = prior[0][1], prior[0][2]
-        return float(np.hypot(x - x0, y - y0))
+        # Scan from the front to find the oldest entry within the window.
+        # O(relevant) instead of building a new list every frame.
+        x0, y0 = x, y
+        for i in range(len(self._trail)):
+            if t - self._trail[i][0] <= window_ms:
+                x0, y0 = self._trail[i][1], self._trail[i][2]
+                break
+        return math.hypot(x - x0, y - y0)
 
     def _emit(self, label):
-        if label in WORD_GLOSS:
+        if label == "SPACE":
+            self.buffer += " "
+        elif label in WORD_GLOSS:
             self.buffer += WORD_GLOSS[label] + " "
         else:
             self.buffer += label
 
     def _status(self, label, conf, runner, t, mean, order, moving=0.0, agreement=1.0):
-        dwell = 0.0
-        if self._dwell_start is not None:
-            dwell = min(1.0, (t - self._dwell_start) / max(self.dwell_ms, 1))
+        target_dwell = self.space_dwell_ms if label == "SPACE" else self.dwell_ms
+        if self._hold_emitted:
+            dwell = 1.0
+        elif self._dwell_start is not None:
+            dwell = min(1.0, (t - self._dwell_start) / max(target_dwell, 1))
+        else:
+            dwell = 0.0
         top = []
         if mean is not None:
             for i in order[:5]:

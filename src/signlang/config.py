@@ -49,7 +49,9 @@ WORD_GLOSS = {
     "FINISHED": "finished",
 }
 
-TRAIN_LABELS = LETTERS + WORDS
+SPECIAL_SIGNS = ["SPACE"]
+
+TRAIN_LABELS = LETTERS + SPECIAL_SIGNS + WORDS
 
 # Frames captured per SPACE press. Samples land in runs of this many near-identical
 # frames, so any honest validation split must hold out whole runs -- see eval_burst.py.
@@ -85,10 +87,12 @@ MAX_HANDS = int(os.environ.get("SIGNLANG_MAX_HANDS", "1"))
 READ_TIMEOUT_S = float(os.environ.get("SIGNLANG_READ_TIMEOUT", "3.0"))
 
 DWELL_MS = 1000
+SPACE_DWELL_MS = 800
 SMOOTH_MS = 420
 CONFIRM_THRESHOLD = 0.72
 STABLE_MARGIN = 0.18
 REPEAT_COOLDOWN_MS = 900
+SPACE_COOLDOWN_MS = 900
 SWIPE_MIN_PX = 110
 SWIPE_MAX_MS = 420
 

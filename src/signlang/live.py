@@ -11,6 +11,7 @@ hands.py and engine.py are used exactly as they are; this file only decides
 what the picture looks like.
 """
 
+import functools
 import re
 import subprocess
 import time
@@ -194,6 +195,7 @@ def _blend(img, box, color, alpha=0.70):
                     dst=roi)
 
 
+@functools.lru_cache(maxsize=16)
 def _layout(w, h):
     """Pixel geometry for one frame size.
 
@@ -333,8 +335,9 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
                     if i > 0:
                         cv2.line(img, (cx, y0 + int(ch * 0.25)), (cx, y0 + int(ch * 0.75)),
                                  C_BORDER, 1)
-                (tw, _), _ = cv2.getTextSize(lab, F_SMALL, cs, ct)
-                cv2.putText(img, lab, (cx + (cell - tw) // 2, y0 + int(ch * 0.72)),
+                lab_text = "_" if lab == "SPACE" else lab
+                (tw, _), _ = cv2.getTextSize(lab_text, F_SMALL, cs, ct)
+                cv2.putText(img, lab_text, (cx + (cell - tw) // 2, y0 + int(ch * 0.72)),
                             F_SMALL, cs, C_PANEL if on else C_DIM,
                             ct, cv2.LINE_AA)
 
@@ -355,6 +358,9 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     cv2.line(img, (cb[0], cb[3] - 1), (cb[0], cb[3] - 1 - cl), bracket_col, 2, cv2.LINE_AA)
     cv2.line(img, (cb[2] - 1, cb[3] - 1), (cb[2] - 1 - cl, cb[3] - 1), bracket_col, 2, cv2.LINE_AA)
     cv2.line(img, (cb[2] - 1, cb[3] - 1), (cb[2] - 1, cb[3] - 1 - cl), bracket_col, 2, cv2.LINE_AA)
+    # Subtle top hairline across the card header for polished glass finish
+    accent_bar = C_GOOD if confirmed else (C_ACCENT if candidate else C_BORDER)
+    cv2.line(img, (cb[0] + cl, cb[1]), (cb[2] - 1 - cl, cb[1]), accent_bar, 1, cv2.LINE_AA)
 
     cx = cb[0] + L["card"] // 2
     cy = cb[1] + int(L["card"] * 0.42)
@@ -397,7 +403,8 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
 
     glyph = candidate or "-"
     gcol = C_GOOD if confirmed else (C_WARN if candidate else C_DIM)
-    gscale, gthick = _scale(u * T_LETTER), _thick(u * T_LETTER)
+    scale_factor = 0.42 if len(glyph) > 1 else 1.0
+    gscale, gthick = _scale(u * T_LETTER * scale_factor), _thick(u * T_LETTER * scale_factor)
     (tw, th), _ = cv2.getTextSize(glyph, F_BIG, gscale, gthick)
     cv2.putText(img, glyph, (cx - tw // 2, cy + th // 2), F_BIG, gscale,
                 gcol, gthick, cv2.LINE_AA)
@@ -530,6 +537,7 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     _blend(img, L["bot"], C_PANEL, 0.75)
     bot_top = L["bot"][1]
     cv2.line(img, (0, bot_top), (w, bot_top), C_BORDER, 1)
+    cv2.line(img, (pad, bot_top), (pad + int(u * 6.0), bot_top), C_ACCENT, 2, cv2.LINE_AA)
 
     # The recent strip answers "did that go in?" without making the user read
     # the transcript. Newest letter is the bright one on the left.
@@ -733,6 +741,7 @@ def main(argv=None):
     fps_t, fps_n, fps_v = time.time(), 0, 0.0
     recent = []
     last_emit, flash_t = None, 0.0
+    cur_target, cur_fs = None, None
     try:
         while True:
             frame, landmarks, handedness = pipe.read(timeout=3.0)
@@ -744,33 +753,41 @@ def main(argv=None):
                 fps_t, fps_n = time.time(), 0
 
             h, w = frame.shape[:2]
-            norm = None
+            norm, pts = None, None
             if landmarks is not None:
                 pts = np.array([[lm.x, lm.y, lm.z] for lm in landmarks], np.float32)
                 draw_landmarks(frame, landmarks)
+                cx, cy = int(landmarks[0].x * w), int(landmarks[0].y * h)
+                cv2.circle(frame, (cx, cy), 4, C_ACCENT, -1, cv2.LINE_AA)
+                cv2.circle(frame, (cx, cy), 7, C_BORDER_HI, 1, cv2.LINE_AA)
                 norm = normalize_hand(pts, handedness)
 
-            st = rec.update(norm, handedness, w, h)
+            st = rec.update(norm, handedness, w, h, pts)
 
             # Track confirmations here rather than in the recogniser, so
             # engine.py stays untouched. `emitted` repeats for 500ms, so only a
             # change of letter counts as a new confirmation.
             emitted = st.get("emitted")
-            if emitted and emitted != " " and emitted != last_emit:
+            if emitted and emitted != last_emit:
                 last_emit = emitted
                 flash_t = time.time()
-                recent.insert(0, emitted)
+                recent.insert(0, "_" if emitted == " " else emitted)
                 del recent[RECENT_MAX:]
+            elif not emitted:
+                last_emit = None
 
             now = time.time()
             flash_ms = (now - flash_t) * 1000.0
             if flash_ms > FLASH_MS:
                 flash_ms = None
 
-            # Compose for the real display size, not for the window: on this
-            # system the window reports the size of the image last drawn, so
-            # trusting it draws the whole overlay into a tiny corner.
-            shown = _fit_to_window(frame, *_target_size(w, h))
+            # Cache the display resolution so we don't spawn a subprocess on
+            # every single frame.
+            if cur_target is None or cur_fs != fullscreen:
+                cur_target = _target_size(w, h)
+                cur_fs = fullscreen
+
+            shown = _fit_to_window(frame, *cur_target)
 
             _draw_overlay(shown, st, predictor.labels, fps_v, rec.threshold,
                           recent, flash_ms, rec.dwell_ms)
@@ -789,6 +806,7 @@ def main(argv=None):
                 # Toggle at runtime so a mis-typed flag needs no restart.
                 fullscreen = not fullscreen
                 _fullscreen = fullscreen
+                cur_fs = None
                 try:
                     if fullscreen:
                         size = _screen_size()
