@@ -265,7 +265,15 @@ def main(argv: Optional[List[str]] = None) -> int:
         description="Record or synthetically generate 30-frame ASL word sequences.",
     )
     parser.add_argument(
+        "--camera",
+        action="store_true",
+        default=True,
+        help="Record interactively from webcam (default).",
+    )
+    parser.add_argument(
         "--synthetic",
+        "--generate",
+        dest="synthetic",
         action="store_true",
         help="Generate synthetic samples instead of opening webcam.",
     )
