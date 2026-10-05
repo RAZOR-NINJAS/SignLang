@@ -56,23 +56,26 @@ def dtw_distance(
     if N == 0 or M == 0:
         return float("inf")
 
-    dp = np.full((N + 1, M + 1), np.inf, dtype=np.float32)
-    dp[0, 0] = 0.0
+    prev = np.full(M + 1, np.inf, dtype=np.float32)
+    curr = np.full(M + 1, np.inf, dtype=np.float32)
+    prev[0] = 0.0
 
     w = max(window, abs(N - M)) if window is not None else max(N, M)
 
     for i in range(1, N + 1):
+        curr.fill(np.inf)
         j_start = max(1, i - w)
         j_end = min(M + 1, i + w + 1)
         cost_i = cost[i - 1]
         for j in range(j_start, j_end):
-            dp[i, j] = cost_i[j - 1] + min(
-                dp[i - 1, j],      # insertion
-                dp[i, j - 1],      # deletion
-                dp[i - 1, j - 1],  # match
+            curr[j] = cost_i[j - 1] + min(
+                prev[j],      # insertion
+                curr[j - 1],  # deletion
+                prev[j - 1],  # match
             )
+        prev, curr = curr, prev
 
-    return float(dp[N, M] / (N + M))
+    return float(prev[M] / (N + M))
 
 
 def dtw_distance_matrix(
@@ -192,6 +195,18 @@ class DTWKNNClassifier(BaseEstimator, ClassifierMixin):
             - details (dict with voting probabilities, top-k distances, raw label)
         """
         thresh = self.confidence_threshold if threshold is None else threshold
+        q_arr = np.asarray(query, dtype=np.float32)
+        if len(q_arr) == 0:
+            return None, 0.0, {
+                "raw_label": None,
+                "vote_prob": 0.0,
+                "best_dist": float("inf"),
+                "quality": 0.0,
+                "top_distances": [],
+                "top_labels": [],
+                "class_probs": {},
+            }
+
         distances = self._compute_query_distances(query)
 
         k = min(self.n_neighbors, len(distances))
@@ -202,6 +217,17 @@ class DTWKNNClassifier(BaseEstimator, ClassifierMixin):
         # Inverse distance weights
         weights = 1.0 / (top_distances + 1e-4)
         total_weight = float(np.sum(weights))
+
+        if total_weight <= 0.0 or not np.isfinite(total_weight):
+            return None, 0.0, {
+                "raw_label": None,
+                "vote_prob": 0.0,
+                "best_dist": float("inf"),
+                "quality": 0.0,
+                "top_distances": top_distances.tolist(),
+                "top_labels": top_labels.tolist(),
+                "class_probs": {},
+            }
 
         # Class voting probabilities
         class_probs: Dict[str, float] = {}

@@ -23,6 +23,7 @@ def evaluate_cross_validation(
     n_splits: int = 5,
     n_neighbors: int = KNN_NEIGHBORS,
     confidence_threshold: float = CONFIDENCE_THRESHOLD,
+    window: Optional[int] = None,
     random_state: int = 42,
 ) -> Dict[str, Any]:
     """Run stratified cross-validation on landmark sequences.
@@ -33,6 +34,7 @@ def evaluate_cross_validation(
         n_splits: Number of cross-validation folds.
         n_neighbors: k in kNN classifier.
         confidence_threshold: Confidence rejection threshold.
+        window: Sakoe-Chiba DTW warping window.
         random_state: Random state for K-fold splitting.
 
     Returns:
@@ -56,6 +58,7 @@ def evaluate_cross_validation(
         clf = DTWKNNClassifier(
             n_neighbors=n_neighbors,
             confidence_threshold=confidence_threshold,
+            window=window,
         )
         clf.fit(X_train, y_train)
 
@@ -150,6 +153,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         help="Confidence rejection threshold (default: 0.65).",
     )
     parser.add_argument(
+        "--window",
+        type=int,
+        default=None,
+        help="DTW Sakoe-Chiba band window (default: None for full window).",
+    )
+    parser.add_argument(
         "--samples",
         type=int,
         default=10,
@@ -172,13 +181,14 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     print(f"Loaded {len(X)} samples across {len(np.unique(y))} vocabulary words.")
 
-    print(f"\nRunning {args.cv}-fold cross-validation (k={args.k}, threshold={args.threshold:.2f})...")
+    print(f"\nRunning {args.cv}-fold cross-validation (k={args.k}, threshold={args.threshold:.2f}, window={args.window})...")
     results = evaluate_cross_validation(
         X,
         y,
         n_splits=args.cv,
         n_neighbors=args.k,
         confidence_threshold=args.threshold,
+        window=args.window,
     )
 
     print("\n" + "=" * 60)
@@ -199,6 +209,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         clf = DTWKNNClassifier(
             n_neighbors=args.k,
             confidence_threshold=args.threshold,
+            window=args.window,
         )
         clf.fit(X, y)
         clf.save(model_path)

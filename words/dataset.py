@@ -68,15 +68,17 @@ def save_word_samples(
     arr = np.asarray(sequences, dtype=np.float32)
 
     # Normalize dimensions to (N, SEQUENCE_LENGTH, TOTAL_LANDMARKS, 3)
-    if arr.ndim == 3 and arr.shape[1] == SEQUENCE_LENGTH and arr.shape[2] == FEATURE_DIM:
+    if arr.ndim == 2 and arr.shape[0] == SEQUENCE_LENGTH and arr.shape[1] == FEATURE_DIM:
+        arr = arr.reshape(1, SEQUENCE_LENGTH, TOTAL_LANDMARKS, 3)
+    elif arr.ndim == 3 and arr.shape[1] == SEQUENCE_LENGTH and arr.shape[2] == FEATURE_DIM:
         arr = arr.reshape(-1, SEQUENCE_LENGTH, TOTAL_LANDMARKS, 3)
-    elif arr.ndim == 3 and arr.shape[0] == SEQUENCE_LENGTH:
+    elif arr.ndim == 3 and arr.shape[0] == SEQUENCE_LENGTH and arr.shape[1] == TOTAL_LANDMARKS and arr.shape[2] == 3:
         # Single sequence passed
         arr = arr[None, ...]
         if arr.shape[-1] == FEATURE_DIM:
             arr = arr.reshape(1, SEQUENCE_LENGTH, TOTAL_LANDMARKS, 3)
 
-    if arr.ndim != 4 or arr.shape[1] != SEQUENCE_LENGTH or arr.shape[2] != TOTAL_LANDMARKS:
+    if arr.ndim != 4 or arr.shape[1] != SEQUENCE_LENGTH or arr.shape[2] != TOTAL_LANDMARKS or arr.shape[3] != 3:
         raise ValueError(
             f"Expected sequences of shape (N, {SEQUENCE_LENGTH}, {TOTAL_LANDMARKS}, 3), got {arr.shape}"
         )
@@ -140,8 +142,9 @@ def load_dataset(
                 y_list.append(word)
 
     if not X_list:
+        empty_shape = (0, SEQUENCE_LENGTH, FEATURE_DIM) if flatten else (0, SEQUENCE_LENGTH, TOTAL_LANDMARKS, 3)
         return (
-            np.empty((0, SEQUENCE_LENGTH, FEATURE_DIM if flatten else TOTAL_LANDMARKS), dtype=np.float32),
+            np.empty(empty_shape, dtype=np.float32),
             np.empty(0, dtype=object),
         )
 
