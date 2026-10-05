@@ -39,14 +39,18 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
 
     args, rest = parser.parse_known_args(argv)
 
-    if args.help and not rest:
-        parser.print_help()
-        print("\nExamples:")
-        print("  python main.py                      # Run letters live recognition (default)")
-        print("  python main.py --mode letters       # Run letters mode")
-        print("  python main.py --mode words         # Run words mode")
-        print("  python main.py --mode words --source 0")
-        return 0
+    if args.help:
+        if not rest:
+            parser.print_help()
+            print("\nExamples:")
+            print("  python main.py                      # Run letters live recognition (default)")
+            print("  python main.py --mode letters       # Run letters mode")
+            print("  python main.py --mode words         # Run words live mode")
+            print("  python main.py --mode words record  # Record words sequences")
+            print("  python main.py --mode words eval    # Evaluate words model")
+            return 0
+        else:
+            rest = list(rest) + ["--help"]
 
     # Strict isolation: letters mode MUST NOT import words
     if args.mode == "letters":

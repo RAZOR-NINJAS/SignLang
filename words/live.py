@@ -67,10 +67,20 @@ def compute_motion_energy(prev_lms: np.ndarray, curr_lms: np.ndarray) -> float:
     """Compute average landmark motion velocity/energy between consecutive frames.
 
     Focuses on wrists (indices 5, 6) and hand landmarks (indices 9..50).
+    Filters out missing/zero landmark transitions (e.g. hand dropout or sudden appearance)
+    to prevent artificial velocity spikes.
     """
     # Active landmark indices: wrists and hands
     active_indices = [5, 6] + list(range(9, min(51, len(curr_lms))))
-    diff = curr_lms[active_indices] - prev_lms[active_indices]
+    pts_prev = prev_lms[active_indices]
+    pts_curr = curr_lms[active_indices]
+
+    # Only consider landmarks tracked in BOTH frames (norm > epsilon)
+    valid = (np.linalg.norm(pts_prev, axis=-1) > 1e-4) & (np.linalg.norm(pts_curr, axis=-1) > 1e-4)
+    if not np.any(valid):
+        return 0.0
+
+    diff = pts_curr[valid] - pts_prev[valid]
     dists = np.linalg.norm(diff, axis=-1)
     return float(np.mean(dists))
 
@@ -154,6 +164,7 @@ def draw_hud(
 def run_live(
     source: str = DEFAULT_SOURCE,
     classifier: Optional[DTWKNNClassifier] = None,
+    threshold: Optional[float] = None,
     max_frames: Optional[int] = None,
     headless: bool = False,
     display: bool = True,
@@ -163,6 +174,7 @@ def run_live(
     Args:
         source: Video capture source (device index '0' or video file path).
         classifier: Fitted DTWKNNClassifier. If None, loaded from disk.
+        threshold: Confidence threshold. Overrides classifier threshold if given.
         max_frames: Optional maximum frames to process (useful for tests).
         headless: If True, skips cv2 window display.
         display: If False, skips cv2.imshow.
@@ -192,6 +204,9 @@ def run_live(
             classifier = DTWKNNClassifier(n_neighbors=KNN_NEIGHBORS, confidence_threshold=CONFIDENCE_THRESHOLD)
             classifier.fit(X, y)
             classifier.save(model_path)
+
+    if threshold is not None:
+        classifier.confidence_threshold = threshold
 
     # Open Video Source
     src_val = int(source) if source.isdigit() else source
@@ -228,6 +243,7 @@ def run_live(
     state = "REST"  # REST, SIGNING, CONFIRMED
     cooldown = 0
     smooth_energy = 0.0
+    peak_energy = 0.0
     prev_landmarks: Optional[np.ndarray] = None
 
     last_word: Optional[str] = None
@@ -255,13 +271,8 @@ def run_live(
                 fps_counter = 0
                 fps_time = now
 
-            if max_frames is not None and frame_count >= max_frames:
-                break
-
-            frame = cv2.flip(frame, 1)  # Selfie mirror
-
-            # Process detection at FRAME_SKIP rate
-            if frame_count % FRAME_SKIP == 0:
+            # Process detection at FRAME_SKIP rate (including frame 1)
+            if (frame_count - 1) % FRAME_SKIP == 0:
                 rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 results = holistic.process(rgb)
 
@@ -303,17 +314,23 @@ def run_live(
                 elif state == "REST":
                     if smooth_energy >= ENERGY_ACTIVE_THRESHOLD:
                         state = "SIGNING"
+                        peak_energy = smooth_energy
                         # Seed with recent frames
                         active_segment = list(sliding_window)[-5:]
 
                 elif state == "SIGNING":
                     active_segment.append(raw_lms)
+                    peak_energy = max(peak_energy, smooth_energy)
 
-                    # Trigger condition: motion has slowed down or reached max length
-                    motion_stopped = (smooth_energy < ENERGY_QUIET_THRESHOLD and len(active_segment) >= 12)
-                    buffer_full = (len(active_segment) >= SEQUENCE_LENGTH + 6)
+                    # Trigger condition:
+                    # 1. Motion slowed down to quiet rest after sufficient duration
+                    motion_stopped = (smooth_energy < ENERGY_QUIET_THRESHOLD and len(active_segment) >= 10)
+                    # 2. Continuous signing: velocity valley after motion peak (inter-sign coarticulation)
+                    velocity_valley = (len(active_segment) >= 14 and smooth_energy < peak_energy * 0.5 and peak_energy >= ENERGY_ACTIVE_THRESHOLD)
+                    # 3. Buffer full reached maximum length
+                    buffer_full = (len(active_segment) >= SEQUENCE_LENGTH)
 
-                    if motion_stopped or buffer_full:
+                    if motion_stopped or velocity_valley or buffer_full:
                         # Extract and resample sequence
                         seg_arr = np.stack(active_segment, axis=0)
                         resampled = resample_sequence(seg_arr, target_length=SEQUENCE_LENGTH)
@@ -327,11 +344,15 @@ def run_live(
                             transcript.append(pred)
                             state = "CONFIRMED"
                             cooldown = COOLDOWN_FRAMES
+                            active_segment = []
+                            peak_energy = 0.0
                             print(f"Recognized word: {pred} ({conf * 100:.1f}%)")
-                        else:
+                        elif motion_stopped or buffer_full:
                             state = "REST"
-
-                        active_segment = []
+                            active_segment = []
+                            peak_energy = 0.0
+                        # If velocity_valley was reached but confidence was below threshold,
+                        # continue accumulating frames as the sign may still be evolving.
 
             # Draw HUD
             draw_hud(
@@ -353,6 +374,9 @@ def run_live(
                     transcript.clear()
                     last_word = None
                     last_conf = 0.0
+
+            if max_frames is not None and frame_count >= max_frames:
+                break
 
     except KeyboardInterrupt:
         pass
@@ -398,6 +422,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     return run_live(
         source=args.source,
+        threshold=args.threshold,
         max_frames=args.max_frames,
         headless=args.headless,
     )
