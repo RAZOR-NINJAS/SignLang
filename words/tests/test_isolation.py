@@ -88,3 +88,38 @@ print("Words loaded independently.")
         check=True,
     )
     assert "Words loaded independently." in result.stdout
+
+
+def test_main_dispatcher_words_subcommands_help():
+    """Verify that main.py --mode words forwards help to record, eval, and live."""
+    for subcmd in ["record", "eval", "live"]:
+        result = subprocess.run(
+            [sys.executable, "main.py", "--mode", "words", subcmd, "--help"],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        assert f"words.{subcmd}" in result.stdout
+
+
+def test_main_dispatcher_default_mode_never_imports_words():
+    """Verify that main.py default mode (letters) never imports words."""
+    code = """
+import sys
+from unittest.mock import patch
+
+with patch("signlang.live.main", return_value=0):
+    import main
+    exit_code = main.dispatch([])
+    assert exit_code == 0
+    words_modules = [m for m in sys.modules if m == "words" or m.startswith("words.")]
+    assert len(words_modules) == 0, f"Words imported in default letters mode: {words_modules}"
+    print("Default mode isolation passed.")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert "Default mode isolation passed." in result.stdout

@@ -142,3 +142,24 @@ def test_extract_landmarks_from_dict():
     np.testing.assert_allclose(coords[9], [0.0, 0.2, 0.3])
     # Check right hand first point (coords idx 30)
     np.testing.assert_allclose(coords[30], [0.5, 0.0, 0.4])
+
+
+def test_sequence_normalization_median_reference():
+    """per_frame=False uses median reference across valid frames for stability."""
+    T = 30
+    frames = np.stack([_make_dummy_frame(seed=i) for i in range(T)])
+    norm_seq = normalize_sequence(frames, per_frame=False)
+    assert norm_seq.shape == (30, TOTAL_LANDMARKS, 3)
+
+    # Frame-to-frame median midpoint across the sequence should be close to zero
+    left_norm = norm_seq[:, BODY_LEFT_SHOULDER_IDX]
+    right_norm = norm_seq[:, BODY_RIGHT_SHOULDER_IDX]
+    midpoints = (left_norm + right_norm) / 2.0
+    median_mid = np.median(midpoints, axis=0)
+    np.testing.assert_allclose(median_mid, np.zeros(3), atol=1e-5)
+
+    # Test completely degenerate sequence (zero shoulder distance everywhere)
+    degen = np.zeros((20, TOTAL_LANDMARKS, 3), dtype=np.float32)
+    norm_degen = normalize_sequence(degen, per_frame=False)
+    assert not np.isnan(norm_degen).any()
+    assert not np.isinf(norm_degen).any()

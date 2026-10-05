@@ -149,3 +149,38 @@ def test_classifier_save_load(tmp_path):
     lbl1, conf1, _ = loaded.predict_single(s1)
     assert lbl1 == "WORD1"
     assert conf1 > 0.8
+
+
+def test_classifier_empty_query_handling():
+    """Empty query sequence of 0 frames must return None and 0.0 confidence without NaN or warnings."""
+    s1 = _generate_synthetic_wave(T=10, D=20, freq=1.0)
+    X = np.stack([s1, s1])
+    y = np.array(["W1", "W2"])
+    clf = DTWKNNClassifier()
+    clf.fit(X, y)
+
+    empty_query = np.zeros((0, 20), dtype=np.float32)
+    label, conf, details = clf.predict_single(empty_query)
+    assert label is None
+    assert conf == 0.0
+    assert not np.isnan(conf)
+    assert details["best_dist"] == float("inf")
+
+
+def test_dtw_distance_empty_sequences():
+    """DTW distance to or from an empty sequence must return inf."""
+    s1 = _generate_synthetic_wave(T=10, D=10)
+    empty = np.zeros((0, 10), dtype=np.float32)
+    assert dtw_distance(s1, empty) == float("inf")
+    assert dtw_distance(empty, s1) == float("inf")
+    assert dtw_distance(empty, empty) == float("inf")
+
+
+def test_dtw_distance_symmetry_with_window():
+    """DTW distance symmetry must hold under Sakoe-Chiba window constraints."""
+    s1 = _generate_synthetic_wave(T=20, D=10, freq=1.0)
+    s2 = _generate_synthetic_wave(T=25, D=10, freq=1.5)
+    for win in [3, 5, 8, 12]:
+        d12 = dtw_distance(s1, s2, window=win)
+        d21 = dtw_distance(s2, s1, window=win)
+        assert pytest.approx(d12, abs=1e-5) == d21
