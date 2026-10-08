@@ -86,6 +86,23 @@ MIRROR = os.environ.get("SIGNLANG_MIRROR", "1") not in ("0", "false", "False")
 MAX_HANDS = int(os.environ.get("SIGNLANG_MAX_HANDS", "1"))
 READ_TIMEOUT_S = float(os.environ.get("SIGNLANG_READ_TIMEOUT", "3.0"))
 
+# --- Performance levers (verified on this machine, see scripts/bench_landmarker.py) ---
+#
+# GPU delegate: runs MediaPipe on the GPU via the OpenGL/EGL delegate instead of the
+# TensorFlow Lite CPU (XNNPACK) path. On the AMD Radeon iGPU here this drops the
+# ~182 ms/frame detection to ~70 ms/frame (~2.6x) with identical landmarks, and it
+# still works headlessly (Mesa surfaceless EGL). Falls back to CPU automatically if
+# the GPU delegate cannot be created. Set "0" to force the CPU path.
+GPU_DELEGATE = os.environ.get("SIGNLANG_GPU", "1") not in ("0", "false", "False")
+
+# Detection frame-skip: run the light MediaPipe hand detector only every Nth frame,
+# reusing the last landmarks in between. The dwell timer is wall-clock based
+# (engine.py), so recognition timing is unaffected -- only the landmark refresh rate
+# drops. 2 nearly doubles the effective frame rate at the cost of slightly slower
+# hand tracking; 1 keeps the original every-frame behaviour. Measured on a synthetic
+# frame: every=1 -> 5.5 fps, every=2 -> ~11 fps (CPU), GPU + every=1 -> ~14 fps.
+DETECT_EVERY = max(1, int(os.environ.get("SIGNLANG_DETECT_EVERY", "1")))
+
 DWELL_MS = 1000
 SPACE_DWELL_MS = 800
 SMOOTH_MS = 420
