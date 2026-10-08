@@ -24,6 +24,7 @@ from .engine import DwellRecognizer
 from .features import normalize_hand
 from .hands import HandPipeline, draw_landmarks
 from .model import Predictor
+from .tts import get_tts
 
 WINDOW = "signlang live"
 
@@ -43,17 +44,26 @@ def _bgr(hex_color):
     return (b, g, r)
 
 
-C_PANEL     = _bgr("#0b0e14")   # Deep midnight obsidian panel fill
-C_BORDER    = _bgr("#1e293b")   # Slate-800 glass border stroke
-C_BORDER_HI = _bgr("#334155")   # Slate-700 highlight stroke
-C_TRACK     = _bgr("#192231")   # Subdued ring/bar track
-C_INK       = _bgr("#f8fafc")   # Crisp high-contrast slate-50 primary text
-C_DIM       = _bgr("#94a3b8")   # Clean slate-400 secondary text
-C_MUTED     = _bgr("#64748b")   # Subtle slate-500 micro labels
-C_GOOD      = _bgr("#10b981")   # Vibrant emerald-500: confident / confirmed
-C_WARN      = _bgr("#f59e0b")   # Warm amber-500: readable / pending
-C_ACCENT    = _bgr("#38bdf8")   # Electric sky-400: live badge, indicators
-C_GOLD      = _bgr("#facc15")   # Radiant amber-gold: active alphabet sign
+# Refined color palette with better depth and visual hierarchy
+C_PANEL     = _bgr("#080b10")   # Deeper midnight for better contrast
+C_PANEL_HI  = _bgr("#0f1419")   # Slightly lifted panel variant
+C_BORDER    = _bgr("#1a1f2e")   # Refined slate border
+C_BORDER_HI = _bgr("#2d3748")   # Highlighted border for active elements
+C_BORDER_GLOW = _bgr("#3b82f6") # Subtle blue glow accent
+C_TRACK     = _bgr("#151a24")   # Darker track for progress elements
+C_INK       = _bgr("#f1f5f9")   # Primary text - slightly softer white
+C_BRIGHT    = _bgr("#ffffff")   # Pure white for emphasis
+C_DIM       = _bgr("#8b9cb3")   # Secondary text - better readability
+C_MUTED     = _bgr("#5a6a80")   # Tertiary text
+C_GOOD      = _bgr("#22c55e")   # Emerald green - success/confirmed
+C_GOOD_DIM  = _bgr("#16a34a")   # Dimmed emerald for tracks
+C_WARN      = _bgr("#eab308")   # Amber - pending/caution
+C_WARN_DIM  = _bgr("#ca8a04")   # Dimmed amber
+C_ACCENT    = _bgr("#0ea5e9")   # Sky blue - interactive/live
+C_ACCENT_HI = _bgr("#38bdf8")   # Bright sky for highlights
+C_GOLD      = _bgr("#fbbf24")   # Warm gold - active selection
+C_GOLD_DIM  = _bgr("#d97706")   # Dimmed gold
+C_ERROR     = _bgr("#ef4444")   # Red - error/low confidence
 
 F_BIG = cv2.FONT_HERSHEY_DUPLEX
 F_SMALL = cv2.FONT_HERSHEY_SIMPLEX
@@ -120,7 +130,7 @@ RECENT_MAX = 10
 
 # Keys shown in the status row. Kept short so it never collides with the
 # readout on a narrow camera.
-HELP = "F fullscreen · Q quit · C clear · swipe = space"
+HELP = "F fullscreen · Q quit · C clear · R read · swipe = space"
 
 
 def _wrap(text, max_px, font, scale, thick=1):
@@ -272,9 +282,10 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     confirmed = candidate is not None and conf >= threshold
 
     # ---- top bar: name on the left, the alphabet on the right ----
-    _blend(img, L["top"], C_PANEL, 0.70)
-    # Subtle border separating top bar from the camera view
-    cv2.line(img, (0, L["top_h"]), (w, L["top_h"]), C_BORDER, 1)
+    _blend(img, L["top"], C_PANEL, 0.75)
+    # Gradient-style bottom border with double line for depth
+    cv2.line(img, (0, L["top_h"] - 1), (w, L["top_h"] - 1), C_BORDER_HI, 1, cv2.LINE_AA)
+    cv2.line(img, (0, L["top_h"]), (w, L["top_h"]), C_BORDER, 1, cv2.LINE_AA)
 
     brand_y = int(u * 3.0)
     ws = _scale(u * T_WORDMARK)
@@ -282,23 +293,30 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
                 C_INK, _thick(u * T_WORDMARK), cv2.LINE_AA)
     (bw, _), _ = cv2.getTextSize("SIGNLANG", F_BIG, ws, _thick(u * T_WORDMARK))
 
-    # Studio broadcast pill badge: container + glowing emerald status dot + label
+    # Studio broadcast pill badge: refined container with pulsing dot + label
     live_x = pad + bw + int(u * 0.9)
     pill_h = int(u * 1.4)
     pill_y = brand_y - int(u * 1.05)
     pill_w = int(u * 4.4)
     if pill_y > 0 and pill_y + pill_h < L["top_h"]:
+        # Outer pill with subtle gradient effect
         cv2.rectangle(img, (live_x, pill_y), (live_x + pill_w, pill_y + pill_h),
                       C_TRACK, -1)
+        # Inner highlight for 3D depth
+        cv2.rectangle(img, (live_x, pill_y), (live_x + pill_w, pill_y + 1),
+                      C_BORDER_HI, 1, cv2.LINE_AA)
         cv2.rectangle(img, (live_x, pill_y), (live_x + pill_w, pill_y + pill_h),
                       C_BORDER_HI, 1, cv2.LINE_AA)
+        # Pulsing status dot with layered glow
         dot_r = max(2, int(u * 0.18))
         dot_cx = live_x + int(u * 0.75)
         dot_cy = pill_y + pill_h // 2
-        # Outer soft aura
-        cv2.circle(img, (dot_cx, dot_cy), dot_r + 2, C_BORDER_HI, 1, cv2.LINE_AA)
-        # Inner radiant emerald bead
-        cv2.circle(img, (dot_cx, dot_cy), dot_r, C_GOOD, -1, cv2.LINE_AA)
+        # Outer soft glow
+        cv2.circle(img, (dot_cx, dot_cy), dot_r + 3, C_GOOD_DIM, 1, cv2.LINE_AA)
+        # Middle glow ring
+        cv2.circle(img, (dot_cx, dot_cy), dot_r + 1, C_GOOD, 1, cv2.LINE_AA)
+        # Core bright dot
+        cv2.circle(img, (dot_cx, dot_cy), dot_r, C_BRIGHT, -1, cv2.LINE_AA)
         ls = _scale(u * 0.52)
         lt = _thick(u * 0.52)
         (lw, lh), _ = cv2.getTextSize("LIVE", F_SMALL, ls, lt)
@@ -322,42 +340,74 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
                 cx = x0 + cell * i
                 on = lab == candidate
                 if on:
+                    cell_bg = C_GOOD if confirmed else C_GOLD
+                    cell_border = C_GOOD_DIM if confirmed else C_WARN
+                    cell_text = C_BRIGHT if confirmed else C_PANEL
                     cv2.rectangle(img, (cx, y0), (cx + cell - 1, y0 + ch),
-                                  C_GOLD, -1, cv2.LINE_AA)
+                                  cell_bg, -1, cv2.LINE_AA)
                     cv2.rectangle(img, (cx, y0), (cx + cell - 1, y0 + ch),
-                                  C_WARN, 1, cv2.LINE_AA)
+                                  cell_border, 1, cv2.LINE_AA)
                     # Glowing pip above the active cell
                     pip_h = max(2, int(u * 0.18))
                     if y0 >= pip_h + 1:
+                        pip_col = C_GOOD if confirmed else C_GOLD
                         cv2.rectangle(img, (cx + cell // 4, y0 - pip_h - 1),
-                                      (cx + 3 * cell // 4, y0 - 1), C_GOLD, -1)
+                                      (cx + 3 * cell // 4, y0 - 1), pip_col, -1)
                 else:
                     if i > 0:
                         cv2.line(img, (cx, y0 + int(ch * 0.25)), (cx, y0 + int(ch * 0.75)),
                                  C_BORDER, 1)
+                    cell_text = C_DIM
                 lab_text = "_" if lab == "SPACE" else lab
                 (tw, _), _ = cv2.getTextSize(lab_text, F_SMALL, cs, ct)
                 cv2.putText(img, lab_text, (cx + (cell - tw) // 2, y0 + int(ch * 0.72)),
-                            F_SMALL, cs, C_PANEL if on else C_DIM,
+                            F_SMALL, cs, cell_text,
                             ct, cv2.LINE_AA)
 
     # ---- reading card: the letter the camera is offering right now ----
     cb = L["card_box"]
-    _blend(img, cb, C_PANEL, 0.72)
-    # 1px glass border around the card
+    _blend(img, cb, C_PANEL, 0.78)
+    # Refined glass border with double-line effect
     cv2.rectangle(img, (cb[0], cb[1]), (cb[2], cb[3]), C_BORDER, 1, cv2.LINE_AA)
+    # Inner subtle highlight
+    cv2.rectangle(img, (cb[0] + 1, cb[1] + 1), (cb[2] - 1, cb[3] - 1), C_BORDER_HI, 1, cv2.LINE_AA)
 
     # Corner brackets / reticles on the card for a refined HUD appearance
     cl = max(3, int(u * 0.85))
-    bracket_col = C_GOOD if confirmed else (C_WARN if candidate else C_BORDER_HI)
-    cv2.line(img, (cb[0], cb[1]), (cb[0] + cl, cb[1]), bracket_col, 2, cv2.LINE_AA)
-    cv2.line(img, (cb[0], cb[1]), (cb[0], cb[1] + cl), bracket_col, 2, cv2.LINE_AA)
-    cv2.line(img, (cb[2] - 1, cb[1]), (cb[2] - 1 - cl, cb[1]), bracket_col, 2, cv2.LINE_AA)
-    cv2.line(img, (cb[2] - 1, cb[1]), (cb[2] - 1, cb[1] + cl), bracket_col, 2, cv2.LINE_AA)
-    cv2.line(img, (cb[0], cb[3] - 1), (cb[0] + cl, cb[3] - 1), bracket_col, 2, cv2.LINE_AA)
-    cv2.line(img, (cb[0], cb[3] - 1), (cb[0], cb[3] - 1 - cl), bracket_col, 2, cv2.LINE_AA)
-    cv2.line(img, (cb[2] - 1, cb[3] - 1), (cb[2] - 1 - cl, cb[3] - 1), bracket_col, 2, cv2.LINE_AA)
-    cv2.line(img, (cb[2] - 1, cb[3] - 1), (cb[2] - 1, cb[3] - 1 - cl), bracket_col, 2, cv2.LINE_AA)
+    # Color based on confidence state
+    if confirmed:
+        bracket_col = C_GOOD
+        bracket_glow = C_GOOD_DIM
+    elif candidate:
+        bracket_col = C_WARN
+        bracket_glow = C_WARN_DIM
+    else:
+        bracket_col = C_BORDER_HI
+        bracket_glow = C_BORDER
+    # Draw corner brackets with glow effect
+    for corner in ["tl", "tr", "bl", "br"]:
+        if corner == "tl":
+            x, y = cb[0], cb[1]
+            dx1, dy1 = cl, 0
+            dx2, dy2 = 0, cl
+        elif corner == "tr":
+            x, y = cb[2] - 1, cb[1]
+            dx1, dy1 = -cl, 0
+            dx2, dy2 = 0, cl
+        elif corner == "bl":
+            x, y = cb[0], cb[3] - 1
+            dx1, dy1 = cl, 0
+            dx2, dy2 = 0, -cl
+        else:  # br
+            x, y = cb[2] - 1, cb[3] - 1
+            dx1, dy1 = -cl, 0
+            dx2, dy2 = 0, -cl
+        # Outer glow
+        cv2.line(img, (x + dx1, y), (x, y), bracket_glow, 3, cv2.LINE_AA)
+        cv2.line(img, (x, y + dy2), (x, y), bracket_glow, 3, cv2.LINE_AA)
+        # Inner bright line
+        cv2.line(img, (x + dx1, y), (x, y), bracket_col, 2, cv2.LINE_AA)
+        cv2.line(img, (x, y + dy2), (x, y), bracket_col, 2, cv2.LINE_AA)
     # Subtle top hairline across the card header for polished glass finish
     accent_bar = C_GOOD if confirmed else (C_ACCENT if candidate else C_BORDER)
     cv2.line(img, (cb[0] + cl, cb[1]), (cb[2] - 1 - cl, cb[1]), accent_bar, 1, cv2.LINE_AA)
@@ -369,7 +419,13 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
 
     # Cardinal tick marks for a precision chronograph dial look
     tlen = max(2, int(u * 0.35))
-    tcol = C_GOOD if confirmed else C_BORDER_HI
+    # Dynamic color based on state
+    if confirmed:
+        tcol = C_GOOD
+    elif dwell > 0.001:
+        tcol = C_ACCENT_HI
+    else:
+        tcol = C_BORDER_HI
     cv2.line(img, (cx, cy - r - 2), (cx, cy - r - 2 - tlen), tcol, 1, cv2.LINE_AA)
     cv2.line(img, (cx + r + 2, cy), (cx + r + 2 + tlen, cy), tcol, 1, cv2.LINE_AA)
     cv2.line(img, (cx, cy + r + 2), (cx, cy + r + 2 + tlen), tcol, 1, cv2.LINE_AA)
@@ -392,17 +448,30 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     # next to the letter is quicker than checking a separate bar.
     cv2.circle(img, (cx, cy), r, C_TRACK, thick, cv2.LINE_AA)
     if dwell > 0.001:
+        # Gradient-like effect: draw the progress arc with the main color
         cv2.ellipse(img, (cx, cy), (r, r), 0, -90.0, -90.0 + 360.0 * dwell,
                     C_GOOD, thick, cv2.LINE_AA)
-        # Leading progress beacon bead with outer halo at the head of the arc
+        # Leading progress beacon bead with glow effect
         ang = np.deg2rad(-90.0 + 360.0 * dwell)
         hx = int(round(cx + r * np.cos(ang)))
         hy = int(round(cy + r * np.sin(ang)))
-        cv2.circle(img, (hx, hy), thick + 2, C_GOOD, 1, cv2.LINE_AA)
-        cv2.circle(img, (hx, hy), thick, C_INK, -1, cv2.LINE_AA)
+        # Outer glow
+        cv2.circle(img, (hx, hy), thick + 3, C_GOOD_DIM, 1, cv2.LINE_AA)
+        # Middle ring
+        cv2.circle(img, (hx, hy), thick + 1, C_GOOD, 1, cv2.LINE_AA)
+        # Bright center
+        cv2.circle(img, (hx, hy), thick - 1, C_BRIGHT, -1, cv2.LINE_AA)
 
     glyph = candidate or "-"
-    gcol = C_GOOD if confirmed else (C_WARN if candidate else C_DIM)
+    # Refined color logic for the letter
+    if confirmed:
+        gcol = C_BRIGHT
+    elif dwell > 0.001:
+        gcol = C_GOOD
+    elif candidate:
+        gcol = C_WARN
+    else:
+        gcol = C_DIM
     scale_factor = 0.42 if len(glyph) > 1 else 1.0
     gscale, gthick = _scale(u * T_LETTER * scale_factor), _thick(u * T_LETTER * scale_factor)
     (tw, th), _ = cv2.getTextSize(glyph, F_BIG, gscale, gthick)
@@ -413,8 +482,17 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     pct = f"{conf * 100:.0f}%" if candidate else "--"
     ps = _scale(u * T_PCT)
     (pw, _), _ = cv2.getTextSize(pct, F_SMALL, ps, _thick(u * T_PCT))
+    # Color the percentage based on confidence level
+    if confirmed:
+        pct_col = C_GOOD
+    elif conf >= 0.7:
+        pct_col = C_ACCENT_HI
+    elif candidate:
+        pct_col = C_DIM
+    else:
+        pct_col = C_MUTED
     cv2.putText(img, pct, (cx - pw // 2, base - int(u * 3.3)), F_SMALL, ps,
-                C_INK if confirmed else C_DIM, _thick(u * T_PCT), cv2.LINE_AA)
+                pct_col, _thick(u * T_PCT), cv2.LINE_AA)
 
     # Countdown. The ring shows progress but not speed: with a one second dwell
     # the user needs to know how much longer, in real units, or the wait feels
@@ -439,12 +517,18 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     bx0 = cb[0] + int(u * 1.2)
     bx1 = cb[2] - int(u * 1.2)
     by = base - int(u * 0.55)
-    bh = max(2, int(u * 0.42))
+    bh = max(3, int(u * 0.48))
+    # Track with subtle inner shadow
     cv2.rectangle(img, (bx0, by), (bx1, by + bh), C_TRACK, -1)
+    cv2.line(img, (bx0, by), (bx1, by), C_BORDER_HI, 1, cv2.LINE_AA)
     if dwell > 0.001:
-        cv2.rectangle(img, (bx0, by),
-                      (bx0 + int((bx1 - bx0) * min(1.0, dwell)), by + bh),
-                      C_GOOD, -1)
+        # Progress fill with gradient effect
+        fill_width = int((bx1 - bx0) * min(1.0, dwell))
+        if fill_width > 0:
+            cv2.rectangle(img, (bx0, by), (bx0 + fill_width, by + bh), C_GOOD, -1)
+            # Bright leading edge
+            cv2.line(img, (bx0 + fill_width - 1, by), (bx0 + fill_width - 1, by + bh),
+                     C_BRIGHT, 1, cv2.LINE_AA)
 
     if candidate is None:
         note, ncol = "show your hand", C_DIM
@@ -466,8 +550,9 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     # the alternatives turns "it just will not confirm" into a usable clue.
     if L["alt_box"] is not None:
         ab = L["alt_box"]
-        _blend(img, ab, C_PANEL, 0.70)
+        _blend(img, ab, C_PANEL, 0.76)
         cv2.rectangle(img, (ab[0], ab[1]), (ab[2], ab[3]), C_BORDER, 1, cv2.LINE_AA)
+        cv2.rectangle(img, (ab[0] + 1, ab[1] + 1), (ab[2] - 1, ab[3] - 1), C_BORDER_HI, 1, cv2.LINE_AA)
 
         ax, tx0, tx1 = L["ax"], L["tx0"], L["tx1"]
         pct_right = L["pct_right"]
@@ -479,16 +564,18 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
             lab = item["label"]
             prob = float(item["prob"])
             cv2.putText(img, lab, (ax, int(y)), F_SMALL, ascl,
-                        C_INK if i == 0 else C_DIM, _thick(u * T_ALT), cv2.LINE_AA)
+                        C_BRIGHT if i == 0 else C_DIM, _thick(u * T_ALT), cv2.LINE_AA)
             y0, y1 = int(y - u * 0.85), int(y - u * 0.45)
             cv2.rectangle(img, (tx0, y0), (tx1, y1), C_TRACK, -1)
-            bar_fill = C_ACCENT if i == 0 else C_BORDER_HI
-            cv2.rectangle(img, (tx0, y0), (tx0 + max(2, int((tx1 - tx0) * prob)), y1),
-                          bar_fill, -1)
+            bar_fill = C_ACCENT_HI if i == 0 else C_BORDER_HI
+            bw = tx0 + max(2, int((tx1 - tx0) * prob))
+            cv2.rectangle(img, (tx0, y0), (bw, y1), bar_fill, -1)
+            if i == 0 and bw > tx0 + 2:
+                cv2.line(img, (bw - 1, y0), (bw - 1, y1), C_BRIGHT, 1, cv2.LINE_AA)
             txt = f"{prob * 100:.0f}"
             (tw2, _), _ = cv2.getTextSize(txt, F_SMALL, aps, _thick(u * T_ALTP))
             cv2.putText(img, txt, (pct_right - tw2, int(y)),
-                        F_SMALL, aps, C_DIM, _thick(u * T_ALTP), cv2.LINE_AA)
+                        F_SMALL, aps, C_INK if i == 0 else C_DIM, _thick(u * T_ALTP), cv2.LINE_AA)
             if i < len(top[1:ALT_ROWS + 1]) - 1:
                 div_y = int(y + u * 0.5)
                 cv2.line(img, (ax, div_y), (pct_right, div_y), C_BORDER, 1)
@@ -534,10 +621,13 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
             cv2.line(img, (fx + b_sz, fy + b_sz), (fx + b_sz, fy + b_sz - b_len), b_col, 1, cv2.LINE_AA)
 
     # ---- bottom: recent letters, then transcript, then the status row ----
-    _blend(img, L["bot"], C_PANEL, 0.75)
+    _blend(img, L["bot"], C_PANEL, 0.80)
     bot_top = L["bot"][1]
-    cv2.line(img, (0, bot_top), (w, bot_top), C_BORDER, 1)
-    cv2.line(img, (pad, bot_top), (pad + int(u * 6.0), bot_top), C_ACCENT, 2, cv2.LINE_AA)
+    # Double-line border for depth
+    cv2.line(img, (0, bot_top), (w, bot_top), C_BORDER, 1, cv2.LINE_AA)
+    cv2.line(img, (0, bot_top + 1), (w, bot_top + 1), C_BORDER_HI, 1, cv2.LINE_AA)
+    # Accent highlight on the left
+    cv2.line(img, (pad, bot_top), (pad + int(u * 6.0), bot_top), C_ACCENT_HI, 2, cv2.LINE_AA)
 
     # The recent strip answers "did that go in?" without making the user read
     # the transcript. Newest letter is the bright one on the left.
@@ -552,16 +642,19 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
             (rw, _), _ = cv2.getTextSize(lab, F_SMALL, rs, rt)
             x = pad + i * step
             if i > 0:
+                # Subtle separator dot
                 dot_x = pad + i * step - int(step * 0.45)
                 cv2.circle(img, (dot_x, ry - int(u * 0.35)), max(1, int(u * 0.12)), C_BORDER_HI, -1, cv2.LINE_AA)
             if newest:
+                # Badge background for newest letter
                 badge_x0 = x - int(u * 0.35)
                 badge_x1 = x + rw + int(u * 0.35)
                 cv2.rectangle(img, (badge_x0, ry - int(u * 1.05)), (badge_x1, ry + int(u * 0.25)), C_TRACK, -1)
-                cv2.rectangle(img, (badge_x0, ry - int(u * 1.05)), (badge_x1, ry + int(u * 0.25)), C_BORDER, 1, cv2.LINE_AA)
+                cv2.rectangle(img, (badge_x0, ry - int(u * 1.05)), (badge_x1, ry + int(u * 0.25)), C_BORDER_HI, 1, cv2.LINE_AA)
+                # Underline accent
                 cv2.rectangle(img, (x - 1, ry + int(u * 0.35)),
                               (x + rw + 1, ry + int(u * 0.70)), C_GOOD, -1)
-            cv2.putText(img, lab, (x, ry), F_SMALL, rs, C_GOOD if newest else C_DIM, rt, cv2.LINE_AA)
+            cv2.putText(img, lab, (x, ry), F_SMALL, rs, C_BRIGHT if newest else C_DIM, rt, cv2.LINE_AA)
 
     ty = bot_top + int(u * 5.0)
     if buffer:
@@ -575,17 +668,19 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
                 cur_x = pad + lw + int(u * 0.3)
                 cur_y0 = ty - int(u * 0.85)
                 cur_y1 = ty + int(u * 0.15)
-                cv2.rectangle(img, (cur_x, cur_y0), (cur_x + max(2, int(u * 0.35)), cur_y1),
-                              C_ACCENT, -1)
+                # Cursor with glow effect
+                cv2.rectangle(img, (cur_x - 1, cur_y0), (cur_x + max(3, int(u * 0.40)), cur_y1), C_ACCENT_HI, -1)
+                cv2.rectangle(img, (cur_x - 1, cur_y0), (cur_x + max(3, int(u * 0.40)), cur_y1), C_BRIGHT, 1, cv2.LINE_AA)
             ty += int(u * 1.95)
     else:
         es = _scale(u * T_STATUS)
+        # More inviting empty state
         cv2.putText(img, "hold a letter still to start", (pad, ty), F_SMALL,
-                    es, C_DIM, _thick(u * T_STATUS), cv2.LINE_AA)
+                    es, C_MUTED, _thick(u * T_STATUS), cv2.LINE_AA)
 
     sy = h - int(u * 0.9)
     # Hairline divider line above the status control row
-    cv2.line(img, (pad, sy - int(u * 0.95)), (w - pad, sy - int(u * 0.95)), C_BORDER, 1)
+    cv2.line(img, (pad, sy - int(u * 0.95)), (w - pad, sy - int(u * 0.95)), C_BORDER, 1, cv2.LINE_AA)
 
     sx = pad
     if gesture:
@@ -593,8 +688,11 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
         gs = _scale(u * T_SUB)
         (gw, _), _ = cv2.getTextSize(gtxt, F_SMALL, gs, _thick(u * T_SUB))
         chip = gw + int(u * 1.4)
+        # Gesture chip with enhanced styling
         cv2.rectangle(img, (sx, sy - int(u * 1.25)), (sx + chip, sy + int(u * 0.25)),
                       C_GOOD, -1)
+        cv2.rectangle(img, (sx, sy - int(u * 1.25)), (sx + chip, sy + int(u * 0.25)),
+                      C_BRIGHT, 1, cv2.LINE_AA)
         cv2.putText(img, gtxt, (sx + int(u * 0.7), sy), F_SMALL, gs,
                     C_PANEL, _thick(u * T_SUB), cv2.LINE_AA)
         sx += chip + int(u * 1.0)
@@ -606,10 +704,18 @@ def _draw_overlay(img, st, labels, fps, threshold, recent=(), flash_ms=None,
     if help_txt:
         cv2.putText(img, help_txt, (sx, sy), F_SMALL, hs, C_DIM, ht, cv2.LINE_AA)
 
-    # Performance monitor dot + text
-    fps_dot_col = C_GOOD if fps >= 20.0 else (C_WARN if fps >= 10.0 else C_DIM)
-    cv2.circle(img, (fps_x - int(u * 0.45), sy - int(u * 0.22)), max(2, int(u * 0.14)),
+    # Performance monitor dot + text with refined colors
+    if fps >= 20.0:
+        fps_dot_col = C_GOOD
+    elif fps >= 10.0:
+        fps_dot_col = C_WARN
+    else:
+        fps_dot_col = C_ERROR
+    # FPS indicator with glow
+    cv2.circle(img, (fps_x - int(u * 0.45), sy - int(u * 0.22)), max(2, int(u * 0.16)),
                fps_dot_col, -1, cv2.LINE_AA)
+    cv2.circle(img, (fps_x - int(u * 0.45), sy - int(u * 0.22)), max(3, int(u * 0.22)),
+               fps_dot_col, 1, cv2.LINE_AA)
     cv2.putText(img, fps_txt, (fps_x, sy), F_SMALL, hs,
                 C_DIM, ht, cv2.LINE_AA)
 
@@ -742,6 +848,11 @@ def main(argv=None):
     recent = []
     last_emit, flash_t = None, 0.0
     cur_target, cur_fs = None, None
+    tts = get_tts()
+    if tts.enabled:
+        print("  TTS: enabled (voice: lessac-medium)")
+    else:
+        print("  TTS: disabled (install piper-tts and sounddevice to enable)")
     try:
         while True:
             frame, landmarks, handedness = pipe.read(timeout=3.0)
@@ -758,8 +869,13 @@ def main(argv=None):
                 pts = np.array([[lm.x, lm.y, lm.z] for lm in landmarks], np.float32)
                 draw_landmarks(frame, landmarks)
                 cx, cy = int(landmarks[0].x * w), int(landmarks[0].y * h)
-                cv2.circle(frame, (cx, cy), 4, C_ACCENT, -1, cv2.LINE_AA)
-                cv2.circle(frame, (cx, cy), 7, C_BORDER_HI, 1, cv2.LINE_AA)
+                # Refined wrist anchor reticle
+                cv2.circle(frame, (cx, cy), 3, C_ACCENT_HI, -1, cv2.LINE_AA)
+                cv2.circle(frame, (cx, cy), 7, C_ACCENT, 1, cv2.LINE_AA)
+                # Fingertip tracking halos on index 4, 8, 12, 16, 20
+                for tip_idx in (4, 8, 12, 16, 20):
+                    tx, ty = int(landmarks[tip_idx].x * w), int(landmarks[tip_idx].y * h)
+                    cv2.circle(frame, (tx, ty), 4, C_GOOD, 1, cv2.LINE_AA)
                 norm = normalize_hand(pts, handedness)
 
             st = rec.update(norm, handedness, w, h, pts)
@@ -773,6 +889,9 @@ def main(argv=None):
                 flash_t = time.time()
                 recent.insert(0, "_" if emitted == " " else emitted)
                 del recent[RECENT_MAX:]
+                # Speak the confirmed letter/gesture
+                if tts.enabled:
+                    tts.say_letter(emitted)
             elif not emitted:
                 last_emit = None
 
@@ -800,6 +919,9 @@ def main(argv=None):
                 rec.clear()
                 recent.clear()
                 last_emit = None
+            elif k in (ord("r"), ord("R")):
+                if tts.enabled and rec.buffer:
+                    tts.read_transcript(rec.buffer)
             elif k == 8:
                 rec.backspace()
             elif k in (ord("f"), ord("F")):
@@ -827,6 +949,7 @@ def main(argv=None):
     finally:
         if pipe is not None:
             pipe.close()
+        tts.close()
         cv2.destroyAllWindows()
 
     print(f"\n  transcript: {rec.buffer!r}")
