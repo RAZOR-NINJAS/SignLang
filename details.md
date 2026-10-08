@@ -590,32 +590,43 @@ red proves nothing.
 
 ## 12. Known issues & methodological caveats
 
-1. **Letters validation is inflated.** `train.py` splits rows at random, but rows
-   arrive in bursts of 14 near-identical frames → near-duplicates straddle the
-   split → reported val_acc ≈ 0.999 means nothing for a new hand. **`eval_burst.py`
-   (project root) is the honest tool**: burst-wise cross-validation holding out
-   whole 14-frame bursts. *Note: it previously crashed (`BURST_FRAMES` imported
-   from the wrong module); that has since been fixed — `BURST_FRAMES = 14` now
-   lives in `signlang/config.py:58` and the import succeeds.* It has not yet been
-   run to produce headline numbers.
-2. **Game letter pool is not evidence-based.** `game/pool.py` excludes
-   I, P, S, L, U, X ("too confusable") and T, Z ("too thin") based on guesses;
-   these lists should be revisited after running `eval_burst.py`.
-3. **One failing test (stale assertion).** `words/tests/test_isolation.py` asserts
-   `len(words.config.WORDS) == 16`, but the vocabulary was expanded to **25**
-   (uncommitted change). The test predates the expansion — stale test, not a code
-   defect. `pytest`: **61 passed, 1 failed**. Fix: update the assert.
-4. **Words vocabulary ahead of data.** 9 of 25 words have zero samples; those can
-   only ever be predicted via synthetic templates. The words model/dataset are
-   overwhelmingly synthetic — real webcam coverage exists mainly for HELLO.
+**Measured results (verified 2026-10-08 by actually running the evals):**
+
+| Eval | Command | Result |
+|---|---|---|
+| Letters, burst-held-out (honest) | `.venv/bin/python eval_burst.py` | **100.0%** over 10,570 held-out frames / 755 bursts; worst letters Q 99.6%, W 99.6%, P 99.7%; only confusions W→J, R→X, Q↔P (1 each) |
+| Letters, random row split (inflated) | inside `signlang train` | val_acc 0.9995 — meaningless (burst leakage) |
+| Words, train synthetic → test real | `main.py --mode words eval` | **0.0% accuracy, 0.0% coverage** — all 7 real webcam HELLO samples rejected |
+| Words, 5-fold CV (mostly synthetic) | same | 98.89% ± 2.22, ~20 ms/sample — optimistic (template recall) |
+
+1. **Letters random-split validation is inflated** — `train.py` splits rows at
+   random, but rows arrive in bursts of 14 near-duplicate frames, so its
+   val_acc ≈ 0.999 means nothing. **`eval_burst.py` is the honest tool** (holds
+   out whole bursts; `BURST_FRAMES = 14` lives in `signlang/config.py:58`) and
+   has now been run: **100.0% on unseen bursts** (table above). Quote that
+   number instead — with the caveat that it is same-person, same-camera.
+2. **Game letter pool is contradicted by evidence.** `game/pool.py` excludes
+   I, P, S, L, U, X ("too confusable") and T ("too thin") based on guesses.
+   `eval_burst.py` grades **all 26 signs "safe"** (T=56 samples included). The
+   exclusion lists should be replaced with the eval's recommendation: pool = all.
+3. **Fixed:** the stale `test_isolation.py` assertion (hardcoded 16-word
+   vocabulary) now checks consistency with `NUM_WORDS`. Suite: **62/62 pass**.
+4. **Words model does not transfer to real signs (the critical issue).**
+   Trained on 80 synthetic + 7 real sequences, it accepts **0 of 7** real
+   webcam samples (rejected by the distance gate / confidence). 9 of 25
+   vocabulary words have zero samples at all. Until real recordings exist for
+   each word, live words mode will reject nearly everything — this is a data
+   problem, not a code problem. Fix: `main.py --mode words record --camera
+   --samples 20` for every word, then `eval --save-model` and check that the
+   real-hold-out line rises above 0%.
 5. **Model trained on one person's hands** (letters and words). Accuracy on other
    people/cameras is known to be worse; the workflow is collect → train → live.
 6. **Confusable pairs:** A/E, M/N, U/V/R (letters); R/U/V trio also relevant for
    words.
 7. **`en_US-lessac-medium.onnx` (63 MB) is unused.** `TTS_VOICE` exists in config
    but nothing references it — there is no TTS feature. Safe to ignore (or delete).
-8. **Stale documentation/comment nits:** README says "A–H and K–N" in the intro
-   while the bundled model actually covers A–Y + SPACE; `words/config.py` says
+8. **Stale documentation/comment nits:** ~~README says "A–H and K–N"~~ (fixed —
+   now says A–Y + SPACE with measured numbers); `words/config.py` says
    "24-word" for a 25-word list; `signlang help` lists an `assess` command that
    `cli.py` doesn't implement (prints "unknown command"); `game/scoring.py`
    comment references the old 620 ms dwell (now 1000 ms); `docs/PROJECT_OVERVIEW.md`
@@ -623,11 +634,14 @@ red proves nothing.
 9. **Performance ceiling:** MediaPipe detection dominates the frame budget; levers
    are the GPU delegate, `SIGNLANG_DETECT_EVERY`, and (protected code) a lighter
    model. Overlay optimization cannot materially improve fps.
-10. **Uncommitted work:** a large body of changes (§14) sits in the working tree.
+10. ~~Uncommitted work~~ — everything was committed and pushed (see §14).
+   `words/models/words_classifier.npz` was re-saved on 2026-10-08 with the
+   current code (87 refs, calibrated scales, threshold 0.18); the previous file
+   was an old-format model predating calibration (threshold 0.65, no scales).
 
 ---
 
-## 13. Git history (20 commits, chronological)
+## 13. Git history (24 commits, chronological, all pushed to GitHub)
 
 ```
 6d000b5 Add recordings for I through Y and retrain the 25-sign model
@@ -652,9 +666,10 @@ words subsystem, then isolation/tests.)
 
 ---
 
-## 14. Uncommitted working-tree state (as of this doc)
+## 14. Change set shipped in PR #1 (was uncommitted; committed 2026-10-08)
 
-`git diff --stat` — 12 files, **+1111 / −215**, plus 3 untracked files:
+Pushed to `github.com/RAZOR-NINJAS/SignLang` via PR #1 (merged into `main`).
+Original diff — 12 files, **+1111 / −215**, plus 3 new files:
 
 | File | Change |
 |---|---|
@@ -692,10 +707,15 @@ words subsystem, then isolation/tests.)
 
 ## 16. Suggested next steps
 
-1. Run `eval_burst.py` for honest per-letter accuracy; use it to fix the
-   `game/pool.py` exclusion lists and to check whether the R/U retrain helped.
-2. Fix the stale assert in `words/tests/test_isolation.py` (`== 16` → `== 25`) to
-   get the suite green.
-3. Record real samples for words mode (currently mostly synthetic); the live HUD
-   warns about this.
-4. Commit the pending work (§14).
+1. **Record real samples for words mode — this is the blocker.** The honest
+   hold-out (train synthetic → test real) accepts **0 of 7** real samples
+   (§12). Record ≥20 sequences per word with `main.py --mode words record
+   --camera`, re-run `eval --save-model`, and confirm the real-hold-out line
+   is no longer 0% before demoing words mode.
+2. **Update `game/pool.py` exclusions** — `eval_burst.py` grades all 26 signs
+   "safe" (§12), contradicting the hardcoded exclude list.
+3. ~~Run `eval_burst.py`~~ done — 100.0% burst-held-out (§12).
+4. ~~Fix stale test assert~~ done — 62/62 (§12).
+5. ~~Commit and push the pending work~~ done — PR #1 merged (§14).
+6. Record more bursts for the thin letters (T=56) if you plan to demo with
+   hands other than your own.

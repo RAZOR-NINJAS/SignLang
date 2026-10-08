@@ -4,9 +4,13 @@ Real-time ASL fingerspelling and word-sign recognition from your webcam, running
 locally on CPU. Nothing leaves your machine.
 
 A trained model and its recordings are included, so you can run `signlang live`
-straight away. It recognises **A-H and K-N** and was trained on one person's
-hands, so it will be less accurate on yours. Retrain it on your own signs for
-the best results.
+straight away. It recognises **A–Y (no Z) plus SPACE** — 26 signs from 10,570
+recorded samples — and was trained on one person's hands, so it will be less
+accurate on yours. Retrain it on your own signs for the best results.
+
+Honest accuracy (5-fold cross-validation that holds out whole 14-frame bursts,
+never splitting near-duplicate neighbours): **100.0% on unseen bursts** from the
+same hands (`eval_burst.py`), with W→J, R→X, Q↔P the only confusions.
 
 MediaPipe supplies 21 hand landmarks per frame, a small MLP classifies them into
 a sign, and a dwell timer turns a held sign into a character.
@@ -129,8 +133,8 @@ palm-scaled, which is what lets them transfer between different cameras.
 
 ## Quick start
 
-A trained model covering A-H and K-N ships with the repo. If you just want to
-see it work:
+A trained model covering **A–Y (no Z) plus SPACE** ships with the repo. If you
+just want to see it work:
 
 ```bash
 signlang live
@@ -325,10 +329,11 @@ import numpy as np
 a = np.load("data/samples/A.npy")     # shape: (n_samples, 21, 3)
 ```
 
-The bundled model covers **A through Y, except Z** from 9170 samples. Sample
-counts are uneven (56 for the thinnest sign, 672 for the thickest); training
-weights by class to compensate. A 56-sample sign is only 4 recording bursts,
-which is too few to generalise reliably -- collect more before relying on it.
+The bundled model covers **A through Y, except Z, plus SPACE** from 10,570
+samples. Sample counts are uneven (56 for the thinnest sign, 840 for the
+thickest); training weights by class to compensate. T at 56 samples is only 4
+recording bursts — it still scored 100% on held-out bursts in `eval_burst.py`,
+but collect more before relying on any thin sign with your own hands.
 
 `.npy` arrays hold normalised landmark vectors, not images, so recordings are
 small and no photographs of your hand are stored.
