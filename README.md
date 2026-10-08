@@ -17,7 +17,7 @@ a sign, and a dwell timer turns a held sign into a character.
 <summary><b>Linux / macOS</b></summary>
 
 ```bash
-git clone https://github.com/vaibhavsingh-shekhawat/signlang.git
+git clone https://github.com/RAZOR-NINJAS/signlang.git
 cd signlang
 python3 -m venv .venv
 source .venv/bin/activate
@@ -31,7 +31,7 @@ bash scripts/fetch_models.sh
 <summary><b>Windows (PowerShell)</b></summary>
 
 ```powershell
-git clone https://github.com/vaibhavsingh-shekhawat/signlang.git
+git clone https://github.com/RAZOR-NINJAS/signlang.git
 cd signlang
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
@@ -235,6 +235,8 @@ All optional, via environment variables:
 | `SIGNLANG_DETECT_HEIGHT` | same as capture | landmark resolution |
 | `SIGNLANG_MIRROR` | `1` | set `0` to disable selfie mirroring |
 | `SIGNLANG_MAX_HANDS` | `1` | hands to track |
+| `SIGNLANG_GPU` | `1` | run hand detection on the GPU (OpenGL/EGL delegate). ~2.6× on the iGPU in this repo; auto-falls back to CPU. Set `0` to force CPU |
+| `SIGNLANG_DETECT_EVERY` | `1` | run the hand detector only every Nth frame, reusing the last landmarks in between (dwell timing unaffected). `2` ≈ doubles the frame rate |
 
 An HTTP MJPEG source works too, which is useful for a phone pointed at yourself:
 
@@ -283,8 +285,13 @@ to its text and a trailing space; letter signs do not. Use a right swipe
 between letter groups.
 
 **Low frame rate.** Landmark detection costs roughly 90 ms per frame on a small
-CPU, capping the loop near 10 fps. Lowering `SIGNLANG_DETECT_HEIGHT` will not
-help much; it is already the dominant cost. Closing other CPU-heavy work helps.
+CPU, capping the loop near 10 fps. Two levers are built in and verified on the
+repo machine: set `SIGNLANG_GPU=1` (default) to run detection on the GPU
+(OpenGL/EGL delegate, ~2.6× here; auto-falls back to CPU), and raise
+`SIGNLANG_DETECT_EVERY` to 2 + to refresh the hand less often. Recognition
+timing is unaffected because the dwell timer is wall-clock based. Lowering
+`SIGNLANG_DETECT_HEIGHT` will not help much; it is already the dominant cost.
+Closing other CPU-heavy work helps too.
 
 **Wrong camera.** `signlang cameras` lists indices, then set `SIGNLANG_CAMERA=1`.
 
