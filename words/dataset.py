@@ -155,6 +155,65 @@ def load_dataset(
     return X, y
 
 
+def load_source_tags(words: Optional[List[str]] = None) -> Dict[str, int]:
+    """Return the number of stored sequences per provenance tag.
+
+    Samples carry a source sidecar (``<WORD>.sources.npy``) recording where each
+    sequence came from, e.g. "synthetic" or "webcam0". Synthetic sequences match
+    their generating template almost exactly, so any accuracy figure computed
+    over a synthetic-dominated dataset overstates real-world performance. This
+    makes that split visible instead of hidden.
+
+    Args:
+        words: Words to include. Defaults to all WORDS.
+
+    Returns:
+        Dict mapping source tag to sequence count, ordered by descending count.
+    """
+    counts: Dict[str, int] = {}
+    for word in (words or WORDS):
+        spath = sources_path_for_word(word)
+        if not spath.exists():
+            continue
+        try:
+            tags = np.load(spath, allow_pickle=True)
+        except (ValueError, OSError):
+            continue
+        for tag in tags:
+            key = str(tag)
+            counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items(), key=lambda kv: -kv[1]))
+
+
+def load_sample_sources(
+    words: Optional[List[str]] = None,
+) -> List[str]:
+    """Return the provenance tag for every sequence in ``load_dataset`` order.
+
+    Returns one tag per sequence, matching the order samples are stacked by
+    ``load_dataset`` (vocab order, then sequence order within each word).
+    Sequences without a sidecar are tagged ``"unknown"``.
+    """
+    vocab = words or WORDS
+    tags: List[str] = []
+    for word in vocab:
+        samples = load_word_samples(word)
+        if samples is None or len(samples) == 0:
+            continue
+        spath = sources_path_for_word(word)
+        word_tags: List[str] = []
+        if spath.exists():
+            try:
+                raw = np.load(spath, allow_pickle=True)
+                word_tags = [str(t) for t in raw]
+            except (ValueError, OSError):
+                word_tags = []
+        if len(word_tags) != len(samples):
+            word_tags = ["unknown"] * len(samples)
+        tags.extend(word_tags)
+    return tags
+
+
 def count_samples() -> Dict[str, int]:
     """Return dictionary of sample count per word."""
     counts = {}
@@ -369,6 +428,87 @@ def _generate_synthetic_sequence_for_word(
         rw[:, 0] = 0.15 + 0.35 * e
         rw[:, 1] = 0.10 + 0.25 * e
         rw[:, 2] = -0.20 - 0.20 * e
+
+    elif word == "GOOD_MORNING":
+        # Compound: hand touches chin (good), then arcs up and outward (morning).
+        e = _ease_in_out(t_lin)
+        tap = np.abs(np.sin(4.0 * np.pi * t_lin))  # brief chin touch, then clear
+        rw[:, 0] = 0.05 + 0.40 * e
+        rw[:, 1] = -0.30 - 0.30 * e + 0.10 * np.sin(2 * np.pi * t_lin)
+        rw[:, 2] = -0.15 - 0.15 * e
+        lw[:] = seq[:, 5]
+
+    elif word == "MORNING":
+        # Sun rising: hand starts at chin and rises in a wide wave across the face.
+        e = _ease_in_out(t_lin)
+        rw[:, 0] = 0.10 + 0.45 * e
+        rw[:, 1] = -0.35 - 0.25 * e + 0.06 * np.sin(4 * np.pi * t_lin)
+        rw[:, 2] = -0.10 - 0.20 * e
+        lw[:] = seq[:, 5]
+
+    elif word == "AFTERNOON":
+        # Forearm sweeps across the body from the shoulder line, flattening out.
+        e = _ease_in_out(t_lin)
+        rw[:, 0] = -0.25 + 0.60 * e
+        rw[:, 1] = -0.25 + 0.40 * e
+        rw[:, 2] = -0.25 + 0.15 * e
+        lw[:] = seq[:, 5]
+
+    elif word == "NIGHT":
+        # Hand arcs down from the eye across the chest, like pulling a curtain.
+        e = _ease_in_out(t_lin)
+        rw[:, 0] = 0.15 * (1.0 - e) - 0.05
+        rw[:, 1] = -0.45 + 0.75 * e
+        rw[:, 2] = -0.15 - 0.10 * e
+        lw[:] = seq[:, 5]
+
+    elif word == "HOW":
+        # Two thumbs-up knock together twice in front of the chest.
+        tap = np.abs(np.sin(4.0 * np.pi * t_lin))
+        rw[:, 0] = 0.20 + 0.15 * (1.0 - tap)
+        rw[:, 1] = 0.10 - 0.05 * np.sin(2 * np.pi * t_lin)
+        rw[:, 2] = -0.28
+        lw[:, 0] = -0.20 - 0.15 * (1.0 - tap)
+        lw[:, 1] = 0.10 - 0.05 * np.sin(2 * np.pi * t_lin)
+        lw[:, 2] = -0.28
+        lh_state = 1.0
+        rh_state = 1.0
+
+    elif word == "WELCOME":
+        # Open palm sweeps in toward the chest in a welcoming arc.
+        e = _ease_in_out(t_lin)
+        theta = np.pi * (0.2 + 0.6 * e)
+        rw[:, 0] = 0.40 * np.cos(theta)
+        rw[:, 1] = 0.15 + 0.18 * np.sin(theta)
+        rw[:, 2] = -0.30 - 0.10 * e
+        lw[:] = seq[:, 5]
+
+    elif word == "HAVE":
+        # Both hands in a C shape pull inward to the chest (possessive).
+        e = _ease_in_out(t_lin)
+        rw[:, 0] = 0.40 - 0.32 * e
+        rw[:, 1] = 0.20 - 0.02 * np.sin(2 * np.pi * t_lin)
+        rw[:, 2] = -0.30
+        lw[:, 0] = -0.40 + 0.32 * e
+        lw[:, 1] = 0.20 + 0.02 * np.sin(2 * np.pi * t_lin)
+        lw[:, 2] = -0.30
+
+    elif word == "WATER":
+        # W-hand taps the chin twice.
+        tap = np.abs(np.sin(4.0 * np.pi * t_lin))
+        rw[:, 0] = 0.05
+        rw[:, 1] = -0.25 - 0.15 * tap
+        rw[:, 2] = -0.25
+        lw[:] = seq[:, 5]
+
+    elif word == "FOOD":
+        # F-hand (pinch) taps the mouth twice.
+        tap = np.abs(np.sin(4.0 * np.pi * t_lin))
+        rw[:, 0] = 0.02
+        rw[:, 1] = -0.20 - 0.18 * tap
+        rw[:, 2] = -0.25 + 0.10 * tap
+        rh_state = -0.5  # Pinched fingertips
+        lw[:] = seq[:, 5]
 
     else:
         # Default smooth motion

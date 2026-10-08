@@ -18,8 +18,10 @@ from .config import (
     BODY_REFERENCE_INDICES,
     COORDS_PER_LANDMARK,
     FEATURE_DIM,
+    LANDMARK_EPSILON,
     LEFT_SHOULDER,
     NUM_HAND_LANDMARKS,
+    POSE_VISIBILITY_MIN,
     RIGHT_SHOULDER,
     TOTAL_LANDMARKS,
 )
@@ -29,8 +31,139 @@ from .config import (
 # 5: LEFT_WRIST, 6: RIGHT_WRIST, 7: LEFT_HIP, 8: RIGHT_HIP
 BODY_LEFT_SHOULDER_IDX = 1
 BODY_RIGHT_SHOULDER_IDX = 2
+BODY_LEFT_WRIST_IDX = 5
+BODY_RIGHT_WRIST_IDX = 6
+
+# Index of each hand's wrist inside the 51-landmark array (wrist is landmark 0
+# of each 21-point hand block).
+LEFT_WRIST_LOCAL = 9 + 0
+RIGHT_WRIST_LOCAL = 30 + 0
 
 EPSILON = 1e-6
+
+
+def extract_landmarks_masked(results: Any) -> Tuple[np.ndarray, np.ndarray]:
+    """Extract landmarks plus a validity mask for one MediaPipe Holistic result.
+
+    MediaPipe Holistic drops a hand or the whole pose for individual frames.
+    Missing landmarks arrive as exact zeros, and because normalization is
+    relative to the shoulder midpoint, those zeros become a large fixed offset
+    instead of "no data". The returned mask lets callers ignore those points
+    rather than feeding artifacts into motion energy or the distance metric.
+
+    Args:
+        results: MediaPipe Holistic process() result object or dict.
+
+    Returns:
+        Tuple of (coords, valid) where coords is (51, 3) float32 and valid is a
+        (51,) boolean array that is False where a landmark was not detected.
+    """
+    coords = np.zeros((TOTAL_LANDMARKS, COORDS_PER_LANDMARK), dtype=np.float32)
+    valid = np.zeros(TOTAL_LANDMARKS, dtype=bool)
+
+    pose_lms = getattr(results, "pose_landmarks", None)
+    if isinstance(results, dict):
+        pose_lms = results.get("pose_landmarks", pose_lms)
+
+    if pose_lms is not None:
+        lm_list = getattr(pose_lms, "landmark", pose_lms)
+        for out_idx, pose_idx in enumerate(BODY_REFERENCE_INDICES):
+            if pose_idx >= len(lm_list):
+                continue
+            lm = lm_list[pose_idx]
+            x = getattr(lm, "x", lm[0] if isinstance(lm, (list, tuple, np.ndarray)) else 0.0)
+            y = getattr(lm, "y", lm[1] if isinstance(lm, (list, tuple, np.ndarray)) else 0.0)
+            z = getattr(lm, "z", lm[2] if isinstance(lm, (list, tuple, np.ndarray)) and len(lm) > 2 else 0.0)
+            coords[out_idx, 0] = x
+            coords[out_idx, 1] = y
+            coords[out_idx, 2] = z
+            # MediaPipe reports visibility on pose landmarks; low visibility means
+            # the point was inferred rather than seen.
+            vis = getattr(lm, "visibility", None)
+            seen = (abs(x) > LANDMARK_EPSILON) or (abs(y) > LANDMARK_EPSILON)
+            valid[out_idx] = bool(seen and (vis is None or vis >= POSE_VISIBILITY_MIN))
+
+    lh_lms = getattr(results, "left_hand_landmarks", None)
+    if isinstance(results, dict):
+        lh_lms = results.get("left_hand_landmarks", lh_lms)
+
+    if lh_lms is not None:
+        lm_list = getattr(lh_lms, "landmark", lh_lms)
+        for i in range(min(NUM_HAND_LANDMARKS, len(lm_list))):
+            lm = lm_list[i]
+            x = getattr(lm, "x", lm[0] if isinstance(lm, (list, tuple, np.ndarray)) else 0.0)
+            y = getattr(lm, "y", lm[1] if isinstance(lm, (list, tuple, np.ndarray)) else 0.0)
+            z = getattr(lm, "z", lm[2] if isinstance(lm, (list, tuple, np.ndarray)) and len(lm) > 2 else 0.0)
+            coords[9 + i, 0] = x
+            coords[9 + i, 1] = y
+            coords[9 + i, 2] = z
+            valid[9 + i] = bool(abs(x) > LANDMARK_EPSILON or abs(y) > LANDMARK_EPSILON)
+
+    rh_lms = getattr(results, "right_hand_landmarks", None)
+    if isinstance(results, dict):
+        rh_lms = results.get("right_hand_landmarks", rh_lms)
+
+    if rh_lms is not None:
+        lm_list = getattr(rh_lms, "landmark", rh_lms)
+        for i in range(min(NUM_HAND_LANDMARKS, len(lm_list))):
+            lm = lm_list[i]
+            x = getattr(lm, "x", lm[0] if isinstance(lm, (list, tuple, np.ndarray)) else 0.0)
+            y = getattr(lm, "y", lm[1] if isinstance(lm, (list, tuple, np.ndarray)) else 0.0)
+            z = getattr(lm, "z", lm[2] if isinstance(lm, (list, tuple, np.ndarray)) and len(lm) > 2 else 0.0)
+            coords[30 + i, 0] = x
+            coords[30 + i, 1] = y
+            coords[30 + i, 2] = z
+            valid[30 + i] = bool(abs(x) > LANDMARK_EPSILON or abs(y) > LANDMARK_EPSILON)
+
+    return coords, valid
+
+
+def impute_invalid(landmarks: np.ndarray, valid: np.ndarray) -> np.ndarray:
+    """Replace untracked landmarks with a plausible position.
+
+    Hand landmarks are rigidly attached to their wrist, so a missing hand point
+    is best filled from the wrist rather than left at zero (which would
+    normalize into a large fixed artifact). Body landmarks are filled from the
+    per-frame mean of the tracked ones.
+
+    Args:
+        landmarks: Array of shape (51, 3).
+        valid: Boolean array of shape (51,).
+
+    Returns:
+        New (51, 3) float32 array with no invalid entries left at zero.
+    """
+    out = np.array(landmarks, dtype=np.float32, copy=True)
+    valid = np.asarray(valid, dtype=bool)
+    if not valid.any():
+        return out
+
+    # Body: mean of tracked body landmarks.
+    body_idx = np.arange(0, 9)
+    body_valid = valid[body_idx]
+    body_fill = out[body_idx][body_valid].mean(axis=0) if body_valid.any() else np.zeros(3, np.float32)
+
+    # Hands: fill each hand from its wrist. Prefer the hand's own wrist landmark,
+    # then the independently tracked body wrist, then the body centroid. The body
+    # wrist still moves when hand detection drops out, so it keeps a dropped hand
+    # attached to the right place instead of collapsing onto the body centre.
+    for hand_start, hand_wrist_idx, body_wrist_idx in (
+        (9, LEFT_WRIST_LOCAL, BODY_LEFT_WRIST_IDX),
+        (30, RIGHT_WRIST_LOCAL, BODY_RIGHT_WRIST_IDX),
+    ):
+        idx = np.arange(hand_start, hand_start + NUM_HAND_LANDMARKS)
+        hvalid = valid[idx]
+        if hvalid.all():
+            continue
+        if valid[hand_wrist_idx]:
+            anchor = out[hand_wrist_idx]
+        elif valid[body_wrist_idx]:
+            anchor = out[body_wrist_idx]
+        else:
+            anchor = body_fill
+        out[idx[~hvalid]] = anchor
+
+    return out
 
 
 def extract_landmarks(results: Any) -> np.ndarray:

@@ -78,7 +78,8 @@ import words.normalize
 import words.classifier
 import words.dataset
 
-assert len(words.config.WORDS) == 16
+assert len(words.config.WORDS) == words.config.NUM_WORDS
+assert len(words.config.WORDS) >= 16
 print("Words loaded independently.")
 """
     result = subprocess.run(
