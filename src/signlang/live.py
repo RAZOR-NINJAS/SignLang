@@ -920,7 +920,7 @@ def main(argv=None):
                 recent.clear()
                 last_emit = None
             elif k in (ord("r"), ord("R")):
-                if tts.enabled and rec.buffer:
+                if tts.enabled:
                     tts.read_transcript(rec.buffer)
             elif k == 8:
                 rec.backspace()
