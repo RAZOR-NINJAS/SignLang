@@ -67,6 +67,9 @@ class ISL_MLP:
         probs = exp_logits / np.sum(exp_logits)
         return probs.astype(np.float32)
 
+    def predict_proba(self, feats: np.ndarray) -> np.ndarray:
+        return self.forward(feats)
+
 
 def get_torch_model(in_dim: int, n_classes: int, hidden: Tuple[int, int] = (192, 112), dropout: float = 0.28):
     """Factory creating PyTorch module for training (only imported during training)."""
@@ -153,6 +156,25 @@ def load_numpy_predictor(path: Optional[Path] = None) -> ISL_MLP:
         mean=ckpt["mean"],
         std=ckpt["std"],
         temperature=float(ckpt.get("temperature", 1.0) or 1.0),
+    )
+
+
+def load_checkpoint(path: Optional[Path] = None) -> Tuple[ISL_MLP, List[str], np.ndarray, np.ndarray, dict]:
+    """Load model checkpoint and return (model, labels, mean, std, meta)."""
+    import torch
+
+    target_path = path or WEIGHTS_PATH
+    if not target_path.exists():
+        raise FileNotFoundError(f"Checkpoint not found at {target_path}")
+
+    ckpt = torch.load(target_path, map_location="cpu", weights_only=False)
+    model = load_numpy_predictor(target_path)
+    return (
+        model,
+        ckpt["labels"],
+        np.asarray(ckpt["mean"], dtype=np.float32),
+        np.asarray(ckpt["std"], dtype=np.float32),
+        ckpt.get("meta", {}),
     )
 
 

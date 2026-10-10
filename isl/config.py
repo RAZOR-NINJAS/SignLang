@@ -20,14 +20,14 @@ STATIC_LETTERS = [c for c in ALL_LETTERS if c not in ("J", "Z")]
 SPECIAL_SIGNS = ["SPACE"]
 TRAIN_LABELS = STATIC_LETTERS + SPECIAL_SIGNS
 
-# Expected number of hands per sign (1 or 2)
-# C, L, V are iconic single-hand letters (or can be signed one-handed)
-# A, B, D-I, K, M-U, W-Y, SPACE require both hands in the ISLRTC standard.
+# Expected number of hands per sign (1 or 2):
+# - 1-hand: C, L, V (iconic single-hand letters) and SPACE (custom single-hand gesture).
+# - 2-hands: A, B, D-I, K, M-U, W-Y (ISLRTC standard two-handed signs).
 EXPECTED_HANDS = {
     "A": 2, "B": 2, "C": 1, "D": 2, "E": 2, "F": 2, "G": 2, "H": 2,
     "I": 2, "J": 2, "K": 2, "L": 1, "M": 2, "N": 2, "O": 2, "P": 2,
     "Q": 2, "R": 2, "S": 2, "T": 2, "U": 2, "V": 1, "W": 2, "X": 2,
-    "Y": 2, "Z": 2, "SPACE": 2,
+    "Y": 2, "Z": 2, "SPACE": 1,
 }
 
 IS_STATIC = {
