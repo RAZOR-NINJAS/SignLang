@@ -89,11 +89,13 @@ def canonicalize_hands(
             continue
         if isinstance(lm, np.ndarray):
             parsed.append(lm.astype(np.float32).reshape(21, 3))
-        else:
-            # MediaPipe NormalizedLandmark objects
-            parsed.append(
-                np.array([[pt.x, pt.y, pt.z] for pt in lm], dtype=np.float32)
-            )
+        elif isinstance(lm, (list, tuple)):
+            if len(lm) > 0 and hasattr(lm[0], "x"):
+                parsed.append(
+                    np.array([[pt.x, pt.y, pt.z] for pt in lm], dtype=np.float32)
+                )
+            else:
+                parsed.append(np.asarray(lm, dtype=np.float32).reshape(21, 3))
 
     if not parsed:
         return None, None
