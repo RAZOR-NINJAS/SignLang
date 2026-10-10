@@ -102,7 +102,57 @@ flowchart TD
 ### 4. Interactive Browser Shadow-Play Game
 * **Mechanism**: Chrome Dino-style obstacle runner game hosted via Python's standard library HTTP server.
 * **Instructional Loop**: Players perform required ASL hand shapes in front of the camera to make the runner jump over obstacles.
-* **Low Overhead**: Zero external web framework dependencies; connects to browser via standard WebSocket/REST endpoints.
+* **Low Overhead**: Zero external web framework dependencies; connects to browser via standard HTTP endpoints.
+
+---
+
+## 🦖 Sign Dino — Interactive Shadow-Play Training Game
+
+<p align="center">
+  <img src="docs/assets/dino_logo.png" alt="Sign Dino Game Logo" width="130" />
+</p>
+
+> **Gamified ASL Fingerspelling Drilling**: Sign Dino is a built-in Chrome Dino-style obstacle runner that transforms ASL dexterity practice into an interactive reflex challenge. Form hand signs in real time to leap over oncoming obstacles!
+
+### 📸 Visual Interface & Gameplay Showcase
+
+| 🎮 Active Challenge: Sign to Leap | 💥 Collision & Diagnostic Analysis |
+| :---: | :---: |
+| <img src="docs/assets/gameplay.png" alt="Sign Dino Gameplay Screen" width="560" /> | <img src="docs/assets/game_over.png" alt="Sign Dino Game Over Screen" width="560" /> |
+| *Sign the prompted letter (e.g. **Y**) within the countdown bar to jump.* | *Post-run diagnostic highlighting the missed sign for targeted retraining.* |
+
+### 🎯 Key Architectural & Gameplay Features
+* **Real-Time Reflex Loop**: A pixel-art dinosaur charges towards approaching cacti. Each obstacle displays a target ASL letter prompt accompanied by an active countdown bar. Form and hold the target hand shape in front of your camera before the timer expires to leap clear of the cactus.
+* **Decoupled Dual-Loop Engine**: The browser client animates sprite physics at a smooth 60 Hz on an HTML5 canvas, completely decoupled from the camera's asynchronous 10+ FPS landmark detector thread.
+* **Zero External Web Dependencies**: Operates entirely over Python's built-in standard library `http.server`. Requires zero third-party web frameworks (no Node.js, FastAPI, or Flask needed).
+* **Targeted Practice Subsets**: Supports `--letters` filtering to isolate and drill difficult confusable letter pairs (e.g., A vs E, or M vs N).
+* **Cross-Device LAN Streaming**: Bind to `0.0.0.0` to play on a mobile phone, tablet, or secondary display over Wi-Fi while your computer's webcam handles hand tracking.
+
+### 🕹️ Complete Game Command Reference
+
+#### 1. Default Launch (Standard Game Mode)
+Starts the local HTTP game server and binds video detection to your primary webcam:
+```bash
+cd /home/vaibhav/Projects/signlang
+.venv/bin/python main.py --mode game
+```
+*(Or via console script:* `cd /home/vaibhav/Projects/signlang && .venv/bin/signlang game`*)*
+*Access in your browser at:* **`http://localhost:8000`**
+
+#### 2. Drill a Specific Subset of Letters
+Isolate and master a specific group of signs:
+```bash
+cd /home/vaibhav/Projects/signlang
+.venv/bin/signlang game --letters=A,B,C,D,E
+```
+
+#### 3. Stream to Mobile / Tablet over Local Wi-Fi
+Launch the server to allow phones or iPads on the same network to connect:
+```bash
+cd /home/vaibhav/Projects/signlang
+.venv/bin/signlang game --host=0.0.0.0 --port=8080
+```
+*Access on your phone's browser at:* **`http://<your-laptop-ip>:8080`**
 
 ---
 

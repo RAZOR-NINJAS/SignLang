@@ -22,9 +22,9 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--mode",
-        choices=["letters", "words"],
+        choices=["letters", "words", "game"],
         default="letters",
-        help="Recognition mode: 'letters' (fingerspelling) or 'words' (holistic signs). Default: letters.",
+        help="Recognition mode: 'letters' (fingerspelling), 'words' (holistic signs), or 'game' (shadow-play). Default: letters.",
     )
     parser.add_argument(
         "--source",
@@ -48,6 +48,7 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
             print("  python main.py --mode words         # Run words live mode")
             print("  python main.py --mode words record  # Record words sequences")
             print("  python main.py --mode words eval    # Evaluate words model")
+            print("  python main.py --mode game          # Run shadow-play Dino game")
             return 0
         else:
             rest = list(rest) + ["--help"]
@@ -79,6 +80,14 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
         import words
         src = args.source if args.source is not None else "0"
         return words.main(source=src, extra_args=rest)
+
+    elif args.mode == "game":
+        from signlang.cli import main as cli_main
+        game_args = ["game"]
+        if args.source is not None:
+            game_args.extend(["--source", str(args.source)])
+        game_args.extend(rest)
+        return cli_main(game_args)
 
     return 1
 
