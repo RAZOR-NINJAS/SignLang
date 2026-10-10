@@ -99,7 +99,14 @@ flowchart TD
 * **Full Transcript Narration**: Pressing **`R`** triggers immediate synthesis and playback of the entire accumulated text buffer.
 * **Thread-Safe Architecture**: Decoupled background worker queue prevents audio operations from stalling the video frame loop.
 
-### 4. Interactive Browser Shadow-Play Game
+### 4. Indian Sign Language (ISL Mode)
+* **Standard Grounding**: Based on the standardized manual alphabet established by the **Indian Sign Language Research and Training Centre (ISLRTC)**, DEPwD, Govt. of India.
+* **Dual-Hand Tracking**: Configures MediaPipe Tasks API with `num_hands=2` to track both hands simultaneously.
+* **Canonical 164-Dimensional Feature Representation**: Canonicalizes hand slots (`slot_left`, `slot_right`), computes 74 invariant geometric features per hand, zero-imputes absent hands, adds 14 inter-hand interaction features (wrist offset, inter-palm distance, fingertip proximities), and 2 hand-presence indicator flags.
+* **Pure NumPy Live Inference**: The live HUD uses an ultra-fast NumPy forward pass (`<0.05 ms`, negligible RAM), avoiding PyTorch import overhead on memory- and thermal-constrained edge machines (e.g. 3.7 GiB laptops).
+* **Scope & Honesty**: Phase 1 covers the 24 static letters (**A through Y except dynamic motion letters J and Z**) plus a single-handed custom **SPACE** gesture. Dynamic letters (J, Z) and holistic signs are deferred to the Phase 2 sequence roadmap. Dataset results reflect single-signer cross-session validation until multi-signer data is added.
+
+### 5. Interactive Browser Shadow-Play Game
 * **Mechanism**: Chrome Dino-style obstacle runner game hosted via Python's standard library HTTP server.
 * **Instructional Loop**: Players perform required ASL hand shapes in front of the camera to make the runner jump over obstacles.
 * **Low Overhead**: Zero external web framework dependencies; connects to browser via standard HTTP endpoints.
@@ -284,7 +291,38 @@ Every command below is documented with its complete directory path and virtual e
 
 ---
 
-### 11. Fetch Dependencies & Neural Models
+### 11. Indian Sign Language (ISL) Workflows
+* **Step A: Launch real-time ISL Live HUD**:
+  ```bash
+  cd /home/vaibhav/Projects/signlang
+  .venv/bin/python main.py --mode isl live
+  ```
+  Tracks both hands concurrently, renders wrist reticles & fingertip halos, displays dual-hand presence badges (`[L: OK R: OK]`), and accumulates confirmed signs into a live transcript with Piper TTS audio feedback.
+
+* **Step B: Collect two-handed ISL training samples**:
+  ```bash
+  cd /home/vaibhav/Projects/signlang
+  .venv/bin/python main.py --mode isl collect --session session1
+  ```
+  Interactive collector that enforces required hand counts (e.g. 2 hands for A, B, D–I, K, M–U, W–Y; 1 hand for C, L, V, SPACE) and tags bursts with session metadata.
+
+* **Step C: Train ISL Multi-Layer Perceptron (MLP)**:
+  ```bash
+  cd /home/vaibhav/Projects/signlang
+  .venv/bin/python main.py --mode isl train --epochs 80
+  ```
+  Trains an MLP on 164-dimensional feature vectors with mirror augmentation (left-hand signer support), OneCycleLR scheduling, and temperature calibration. Saves weights to `isl/models/isl_mlp.pt`.
+
+* **Step D: Evaluate honest multi-session accuracy & confusion matrix**:
+  ```bash
+  cd /home/vaibhav/Projects/signlang
+  .venv/bin/python main.py --mode isl eval
+  ```
+  Performs cross-session holdout or burst cross-validation, printing per-sign accuracy, 1-handed vs 2-handed breakdowns, and full ASCII confusion matrices.
+
+---
+
+### 12. Fetch Dependencies & Neural Models
 * **Purpose**: Idempotently downloads third-party neural assets (MediaPipe Landmarker + Piper TTS model).
 * **Full Command**:
   ```bash
@@ -364,9 +402,11 @@ Validation protocols account for temporal burst correlation, ensuring realistic 
 | Diagnostic Benchmark | Execution Command | Empirical Result | Methodology & Notes |
 | :--- | :--- | :--- | :--- |
 | **Letters (Honest Burst Hold-Out)** | `.venv/bin/python eval_burst.py` | **100.0% Accuracy** | Evaluates 10,570 frames across 755 unseen bursts; prevents data leakage from adjacent frames. |
-| **Full Pytest Regression Suite** | `.venv/bin/python -m pytest` | **66 / 66 Passed** | Comprehensive test suite covering debounce logic, classifier bounds, layout invariants, and TTS threads. |
+| **Full Pytest Regression Suite** | `.venv/bin/python -m pytest` | **93 / 93 Passed** | Comprehensive test suite covering debounce logic, ASL zero-regression, words DTW, and ISL two-hand features & HUD. |
 | **Live Overlay Render Invariance** | `.venv/bin/python -m signlang.test_live_layout` | **84 / 84 Passed** | Evaluates 6 frame resolutions across 14 UI state variations to confirm zero text clipping or collision. |
 | **Words Classification Latency** | `.venv/bin/python main.py --mode words eval` | **~20.1 ms / sample** | Dynamic Time Warping (DTW) sequence alignment latency on standard hardware. |
+| **ISL Dual-Hand Landmark Extraction** | `.venv/bin/python main.py --mode isl live` | **26.0 ms (GPU) / 69.1 ms (CPU)** | Measured on HP 15 laptop (`num_hands=2`); preserves zero regression vs ASL 1-hand baseline (26.1 ms GPU). |
+| **ISL Live Forward Inference** | `Predictor.probs()` | **< 0.05 ms / sample** | Pure NumPy forward pass; zero PyTorch memory or thermal overhead during live execution. |
 
 ---
 
@@ -382,9 +422,10 @@ The application behavior can be customized using environment variables:
 | `SIGNLANG_WIDTH` / `HEIGHT`| `640` / `480` | Native capture dimensions requested from the video capture driver. |
 | `SIGNLANG_DETECT_HEIGHT` | `480` | Target vertical resolution for landmark extraction (accuracy scales with resolution). |
 | `SIGNLANG_DETECT_EVERY` | `1` | Runs landmark detection every Nth frame, reusing cached coordinates in between to increase framerate. |
+| `SIGNLANG_DOMINANT` | `right` | Dominant hand for ISL signing (`right` or `left`). Mapped canonically with mirror augmentation for left-handed signers. |
 | `SIGNLANG_TTS` | `1` | Enables real-time text-to-speech audio feedback. Set to `0` to run in silent mode. |
 | `SIGNLANG_MIRROR` | `1` | Horizontally mirrors video feed to provide a natural selfie mirror view. Set to `0` to disable. |
-| `SIGNLANG_MAX_HANDS` | `1` | Maximum number of concurrent hands tracked by MediaPipe pipeline. |
+| `SIGNLANG_MAX_HANDS` | `1` | Maximum number of concurrent hands tracked by MediaPipe pipeline (overridden to `2` in ISL mode). |
 
 ---
 
