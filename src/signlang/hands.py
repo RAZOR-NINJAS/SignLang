@@ -20,7 +20,7 @@ from .config import (
 )
 
 
-def _create_landmarker(delegate) -> "vision.HandLandmarker":
+def _create_landmarker(delegate, num_hands=MAX_HANDS) -> "vision.HandLandmarker":
     """Build the landmarker. `delegate` is mpp.BaseOptions.Delegate (CPU or GPU)."""
     return vision.HandLandmarker.create_from_options(
         vision.HandLandmarkerOptions(
@@ -28,7 +28,7 @@ def _create_landmarker(delegate) -> "vision.HandLandmarker":
                 model_asset_path=str(LANDMARKER_PATH), delegate=delegate
             ),
             running_mode=vision.RunningMode.VIDEO,
-            num_hands=MAX_HANDS,
+            num_hands=num_hands,
             min_hand_detection_confidence=0.5,
             min_hand_presence_confidence=0.5,
             min_tracking_confidence=0.5,
@@ -45,6 +45,7 @@ class HandPipeline:
             )
         self.source = SOURCE if source is None else source
         self.mirror = mirror
+        self.num_hands = max(1, int(num_hands))
         self._frames: "queue.Queue" = queue.Queue(maxsize=2)
         self._stop = threading.Event()
         self._lock = threading.Lock()
@@ -62,12 +63,16 @@ class HandPipeline:
         self.delegate = "CPU"
         if gpu:
             try:
-                self._landmarker = _create_landmarker(mpp.BaseOptions.Delegate.GPU)
+                self._landmarker = _create_landmarker(
+                    mpp.BaseOptions.Delegate.GPU, num_hands=self.num_hands
+                )
                 self.delegate = "GPU"
             except Exception as exc:  # GPU delegate unavailable -> CPU fallback
                 print(f"[hands] GPU delegate unavailable ({exc}); using CPU")
         if self._landmarker is None:
-            self._landmarker = _create_landmarker(mpp.BaseOptions.Delegate.CPU)
+            self._landmarker = _create_landmarker(
+                mpp.BaseOptions.Delegate.CPU, num_hands=self.num_hands
+            )
 
         self._thread = threading.Thread(target=self._capture_loop, daemon=True)
         self._thread.start()
@@ -159,11 +164,22 @@ class HandPipeline:
         return self._landmarker.detect_for_video(image, self._ts)
 
     def _emit(self, frame, result):
-        """Cache landmarks and return the standard (frame, landmarks, handedness)."""
+        """Cache landmarks and return the standard (frame, landmarks, handedness).
+
+        When num_hands == 1 (default ASL behavior), returns (frame, lm, handedness)
+        where lm is the 21 landmarks of the single hand.
+        When num_hands > 1 (multi-hand ISL mode), returns (frame, lm_list, handedness_list).
+        """
         if not result.hand_landmarks:
             self._last_landmarks = None
             self._last_handedness = None
             return frame, None, None
+        if self.num_hands > 1:
+            handedness = [h[0].category_name for h in result.handedness]
+            lm = list(result.hand_landmarks)
+            self._last_landmarks = lm
+            self._last_handedness = handedness
+            return frame, lm, handedness
         handedness = result.handedness[0][0].category_name
         lm = result.hand_landmarks[0]
         self._last_landmarks = lm
@@ -186,12 +202,18 @@ HAND_CONNECTIONS = [
 ]
 
 
-def draw_landmarks(frame, landmarks, size=2):
+def draw_landmarks(frame, landmarks, size=2, color=(0, 200, 255)):
+    if not landmarks:
+        return frame
+    if isinstance(landmarks, (list, tuple)) and landmarks and isinstance(landmarks[0], (list, tuple)):
+        for hand in landmarks:
+            draw_landmarks(frame, hand, size=size, color=color)
+        return frame
     h, w = frame.shape[:2]
     for a, b in HAND_CONNECTIONS:
         p1 = (int(landmarks[a].x * w), int(landmarks[a].y * h))
         p2 = (int(landmarks[b].x * w), int(landmarks[b].y * h))
-        cv2.line(frame, p1, p2, (0, 200, 255), size, cv2.LINE_AA)
+        cv2.line(frame, p1, p2, color, size, cv2.LINE_AA)
     for i, lm in enumerate(landmarks):
         cv2.circle(
             frame,
