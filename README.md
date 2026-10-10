@@ -1,16 +1,16 @@
 # SignLang
 
 Real-time ASL fingerspelling and word-sign recognition from your webcam, running
-locally on CPU. Nothing leaves your machine.
+locally on your machine. Nothing leaves your machine.
 
 A trained model and its recordings are included, so you can run `signlang live`
 straight away. It recognises **A–Y (no Z) plus SPACE** — 26 signs from 10,570
-recorded samples — and was trained on one person's hands, so it will be less
+recorded samples — but was trained on one person's hands, so it will be less
 accurate on yours. Retrain it on your own signs for the best results.
 
 Honest accuracy (5-fold cross-validation that holds out whole 14-frame bursts,
 never splitting near-duplicate neighbours): **100.0% on unseen bursts** from the
-same hands (`eval_burst.py`), with W→J, R→X, Q↔P the only confusions.
+same hands (`eval_burst.py`), with M→N, N→S, S↔T the only confusions.
 
 MediaPipe supplies 21 hand landmarks per frame, a small MLP classifies them into
 a sign, and a dwell timer turns a held sign into a character.
