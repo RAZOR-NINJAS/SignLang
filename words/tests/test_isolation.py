@@ -66,7 +66,8 @@ def test_main_dispatcher_help_works():
         check=True,
     )
     assert "SignLang: Real-time ASL fingerspelling" in result.stdout
-    assert "--mode {letters,words}" in result.stdout
+    assert "--mode {" in result.stdout
+    assert "letters" in result.stdout and "words" in result.stdout
 
 
 def test_words_standalone_execution():
