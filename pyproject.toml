@@ -1,7 +1,7 @@
 [project]
 name = "signlang"
 version = "0.1.0"
-description = "Real-time ASL fingerspelling and word-sign translator (CPU-only, MediaPipe + small MLP)"
+description = "Real-time ASL fingerspelling and word-sign translator (GPU accelerated, MediaPipe + PyTorch MLP)"
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

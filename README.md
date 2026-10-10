@@ -13,7 +13,7 @@
 
 ## 📌 Executive Summary
 
-**SignLang** is a high-throughput, edge-native American Sign Language (ASL) fingerspelling and dynamic word-sign translation engine. Designed for real-time human-computer interaction, the system executes locally without third-party network requests.
+**SignLang** is a high-throughput, edge-native American Sign Language (ASL) fingerspelling and dynamic word-sign translation engine. Hardware-accelerated via an active GPU delegate (OpenGL/EGL) with resilient CPU fallback, the system executes 100% locally with zero cloud dependencies or network overhead.
 
 ### Core Architectural Pillars
 * **Hardware-Accelerated Computer Vision**: Leverages MediaPipe with an active GPU delegate (OpenGL/EGL) for 3D hand tracking at minimal CPU utilization.
@@ -366,7 +366,7 @@ Validation protocols account for temporal burst correlation, ensuring realistic 
 | **Letters (Honest Burst Hold-Out)** | `.venv/bin/python eval_burst.py` | **100.0% Accuracy** | Evaluates 10,570 frames across 755 unseen bursts; prevents data leakage from adjacent frames. |
 | **Full Pytest Regression Suite** | `.venv/bin/python -m pytest` | **66 / 66 Passed** | Comprehensive test suite covering debounce logic, classifier bounds, layout invariants, and TTS threads. |
 | **Live Overlay Render Invariance** | `.venv/bin/python -m signlang.test_live_layout` | **84 / 84 Passed** | Evaluates 6 frame resolutions across 14 UI state variations to confirm zero text clipping or collision. |
-| **Words Classification Latency** | `.venv/bin/python main.py --mode words eval` | **~20.1 ms / sample** | Dynamic Time Warping (DTW) sequence alignment latency on low-resource CPU. |
+| **Words Classification Latency** | `.venv/bin/python main.py --mode words eval` | **~20.1 ms / sample** | Dynamic Time Warping (DTW) sequence alignment latency on standard hardware. |
 
 ---
 
