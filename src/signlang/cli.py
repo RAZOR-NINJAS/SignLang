@@ -58,6 +58,10 @@ def main(argv=None):
 
         # transfer.main takes the subcommand as argv[0], like train.main does
         return transfer_main([cmd, *rest])
+    if cmd == "isl":
+        import isl
+
+        return isl.main(extra_args=rest)
     if cmd in ("help", "-h", "--help"):
         print(
             """

@@ -22,9 +22,9 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument(
         "--mode",
-        choices=["letters", "words", "game"],
+        choices=["letters", "words", "game", "isl"],
         default="letters",
-        help="Recognition mode: 'letters' (fingerspelling), 'words' (holistic signs), or 'game' (shadow-play). Default: letters.",
+        help="Recognition mode: 'letters' (fingerspelling), 'words' (holistic signs), 'game' (shadow-play), or 'isl' (Indian Sign Language). Default: letters.",
     )
     parser.add_argument(
         "--source",
@@ -49,6 +49,10 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
             print("  python main.py --mode words record  # Record words sequences")
             print("  python main.py --mode words eval    # Evaluate words model")
             print("  python main.py --mode game          # Run shadow-play Dino game")
+            print("  python main.py --mode isl           # Run ISL live recognition")
+            print("  python main.py --mode isl collect   # Record ISL two-handed samples")
+            print("  python main.py --mode isl train     # Train ISL classifier")
+            print("  python main.py --mode isl eval      # Evaluate ISL model")
             return 0
         else:
             rest = list(rest) + ["--help"]
@@ -88,6 +92,13 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
             game_args.extend(["--source", str(args.source)])
         game_args.extend(rest)
         return cli_main(game_args)
+
+    elif args.mode == "isl":
+        # Strict isolation: ensure words is not imported
+        if "words" in sys.modules:
+            del sys.modules["words"]
+        import isl
+        return isl.main(source=args.source, extra_args=rest)
 
     return 1
 
