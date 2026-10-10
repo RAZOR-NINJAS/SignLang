@@ -118,7 +118,7 @@ flowchart TD
 
 | 🎮 Active Challenge: Sign to Leap | 💥 Collision & Diagnostic Analysis |
 | :---: | :---: |
-| <img src="docs/assets/gameplay.png" alt="Sign Dino Gameplay Screen" width="560" /> | <img src="docs/assets/game_over.png" alt="Sign Dino Game Over Screen" width="560" /> |
+| <img src="docs/assets/gameplay_preview.png" alt="Sign Dino Gameplay Screen" width="560" /> | <img src="docs/assets/gameover_preview.png" alt="Sign Dino Game Over Screen" width="560" /> |
 | *Sign the prompted letter (e.g. **Y**) within the countdown bar to jump.* | *Post-run diagnostic highlighting the missed sign for targeted retraining.* |
 
 ### 🎯 Key Architectural & Gameplay Features
