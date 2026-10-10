@@ -88,7 +88,7 @@ signlang/
 │   ├── rebuild_words.py       # Rebuild words dataset+classifier (keeps real samples)
 │   └── bench_landmarker.py    # Camera-free landmarker CPU/GPU cost benchmark
 ├── backups/                   # User backups of model/labels + timestamped archives
-├── en_US-lessac-medium.onnx   # 63 MB Piper TTS voice — UNUSED (no TTS feature exists)
+├── en_US-lessac-medium.onnx   # 63 MB Piper TTS voice (used by src/signlang/tts.py for live speech feedback)
 └── signlang-transfer.tar.gz   # Example export bundle from `signlang export`
 ```
 
@@ -623,8 +623,7 @@ red proves nothing.
    people/cameras is known to be worse; the workflow is collect → train → live.
 6. **Confusable pairs:** A/E, M/N, U/V/R (letters); R/U/V trio also relevant for
    words.
-7. **`en_US-lessac-medium.onnx` (63 MB) is unused.** `TTS_VOICE` exists in config
-   but nothing references it — there is no TTS feature. Safe to ignore (or delete).
+7. ~~**`en_US-lessac-medium.onnx` (63 MB) is unused**~~ — TTS restored in `src/signlang/tts.py` using Piper ONNX voice and sounddevice. Speaks confirmed letters, spaces, and transcript read-aloud via 'R' key. Configured via `TTS_VOICE` and toggled via `SIGNLANG_TTS` environment variable.
 8. **Stale documentation/comment nits:** ~~README says "A–H and K–N"~~ (fixed —
    now says A–Y + SPACE with measured numbers); `words/config.py` says
    "24-word" for a 25-word list; `signlang help` lists an `assess` command that

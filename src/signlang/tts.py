@@ -4,6 +4,7 @@ Synthesizes speech in background threads so the video frame loop never drops bel
 Caches audio clips for standard alphabets in memory for zero-latency speech playback.
 """
 
+import atexit
 import io
 import os
 import queue
@@ -63,6 +64,7 @@ class TTSEngine:
         # Start non-blocking worker thread for playback and dynamic synthesis
         self._worker_thread = threading.Thread(target=self._worker_loop, daemon=True)
         self._worker_thread.start()
+        atexit.register(self.close)
 
     def _precache_letters(self):
         """Pre-synthesize audio for all alphabet letters to guarantee 0ms latency."""
@@ -180,6 +182,10 @@ class TTSEngine:
         self.stop()
         if self._worker_thread and self._worker_thread.is_alive():
             self._worker_thread.join(timeout=1.0)
+        try:
+            atexit.unregister(self.close)
+        except Exception:
+            pass
 
 
 # Module-level singleton instance for convenient import

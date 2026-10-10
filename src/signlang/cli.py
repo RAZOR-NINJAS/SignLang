@@ -73,7 +73,7 @@ signlang - real-time ASL fingerspelling and word-sign translator
   signlang export     package recordings + model to move to another machine
   signlang import     merge a bundle from another machine
 
-Collect, train, then live. A model for A-H and K-N ships with the repo, but it
+Collect, train, then live. A model for A–Y (no Z) plus SPACE ships with the repo, but it
 was trained on someone else's hands: collect your own samples and retrain for
 the best accuracy.
 
@@ -87,6 +87,7 @@ Environment:
   SIGNLANG_CAMERA=1        video device index (alternative to SIGNLANG_SOURCE)
   SIGNLANG_DETECT_HEIGHT=720   landmark resolution (higher = better, no extra cost)
   SIGNLANG_MIRROR=0        disable selfie mirroring
+  SIGNLANG_TTS=0           disable text-to-speech audio feedback
 """
         )
         return 0

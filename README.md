@@ -190,11 +190,14 @@ signlang live
 
 | Action / Gesture | Effect |
 | --- | --- |
-| hold a letter sign | appends the letter after the dwell time (~1.0s, triggers once per hold) |
-| hold **SPACE** gesture | appends exactly one space (open flat palm held ~0.8s, triggers once per hold) |
+| hold a letter sign | appends the letter after the dwell time (~1.0s, triggers once per hold; spoken aloud via TTS) |
+| hold **SPACE** gesture | appends exactly one space (open flat palm held ~0.8s, triggers once per hold; speaks "space") |
 | swipe **right** | space |
 | swipe **left** | delete last letter |
+| `R` | read accumulated transcript aloud via TTS |
 | `C` | clear the transcript |
+| `Backspace` | delete last character |
+| `F` | toggle fullscreen mode |
 | `Q` or `Esc` | quit |
 
 #### Custom SPACE Gesture & Debouncing
@@ -203,6 +206,13 @@ signlang live
 - **Hold-Once Debouncing**: Holding SPACE triggers exactly one space character after ~0.8s (`SPACE_DWELL_MS`). Keeping the hand raised will **not** spam repeated spaces. The same hold-once debouncing applies to fingerspelled letters.
 - **Cooldown**: To append another space, release the hold (relax/lower hand) and wait for the cooldown (~900ms) before holding the gesture again.
 - **Recording SPACE samples**: Run `.venv/bin/python scripts/record_space.py --camera` to record from your webcam, or `--generate` to generate landmark samples.
+
+#### Text-to-Speech (TTS) Feedback
+
+- **Speech Engine**: Built-in CPU speech synthesis powered by Piper ONNX (`en_US-lessac-medium.onnx`) and `sounddevice`.
+- **Instant Letter Audio**: Pre-synthesized in-memory audio clips for characters A–Z, SPACE, and BACKSPACE ensure zero latency during live fingerspelling without dropping video frames.
+- **Read Aloud (`R`)**: Press **R** at any time during live mode to speak the entire recognized transcript aloud.
+- **Mute / Silent Mode**: Set `SIGNLANG_TTS=0` to run silently without audio output.
 
 Tuning for your hand:
 
@@ -241,6 +251,7 @@ All optional, via environment variables:
 | `SIGNLANG_MAX_HANDS` | `1` | hands to track |
 | `SIGNLANG_GPU` | `1` | run hand detection on the GPU (OpenGL/EGL delegate). ~2.6× on the iGPU in this repo; auto-falls back to CPU. Set `0` to force CPU |
 | `SIGNLANG_DETECT_EVERY` | `1` | run the hand detector only every Nth frame, reusing the last landmarks in between (dwell timing unaffected). `2` ≈ doubles the frame rate |
+| `SIGNLANG_TTS` | `1` | set `0` to disable text-to-speech audio feedback (runs completely silent) |
 
 An HTTP MJPEG source works too, which is useful for a phone pointed at yourself:
 
