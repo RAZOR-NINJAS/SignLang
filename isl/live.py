@@ -6,6 +6,8 @@ signs using a dwell timer state machine with audio TTS read-aloud and live trans
 """
 
 import argparse
+import re
+import subprocess
 import sys
 import time
 from typing import Dict, List, Optional, Tuple
@@ -261,6 +263,61 @@ class ISLDwellRecognizer:
         }
 
 
+def _screen_size() -> Optional[Tuple[int, int]]:
+    """Pixel size of the focused monitor on Hyprland/Wayland or standard display."""
+    try:
+        out = subprocess.run(
+            ["hyprctl", "monitors", "all"],
+            capture_output=True,
+            text=True,
+            timeout=2.0,
+            check=True,
+        ).stdout
+        for block in out.split("\n\n"):
+            if "focused: yes" not in block:
+                continue
+            size = re.search(r"^\s*(\d+)x(\d+)@\s*[\d.]+", block, re.M)
+            scale = re.search(r"^\s*scale:\s*([\d.]+)", block, re.M)
+            if not size:
+                continue
+            w, h = int(size.group(1)), int(size.group(2))
+            s = float(scale.group(1)) if scale else 1.0
+            if s <= 0:
+                s = 1.0
+            return max(1, int(w / s)), max(1, int(h / s))
+    except (OSError, subprocess.SubprocessError):
+        pass
+    return None
+
+
+def _target_size(frame_w: int, frame_h: int, fullscreen: bool) -> Tuple[int, int]:
+    """Size to compose for: the monitor when fullscreen, else standard 1280x720."""
+    if not fullscreen:
+        return 1280, 720
+    size = _screen_size()
+    return size if size else (frame_w, frame_h)
+
+
+def _fit_to_window(frame: np.ndarray, win_w: int, win_h: int) -> np.ndarray:
+    """Center frame inside win_w x win_h on a dark midnight canvas (no white borders)."""
+    h, w = frame.shape[:2]
+    if (w, h) == (win_w, win_h):
+        return frame
+    if win_w <= 0 or win_h <= 0:
+        return frame
+    scale = min(win_w / w, win_h / h)
+    nw = max(1, int(round(w * scale)))
+    nh = max(1, int(round(h * scale)))
+    if (nw, nh) != (w, h):
+        interp = cv2.INTER_AREA if scale < 1.0 else cv2.INTER_LINEAR
+        frame = cv2.resize(frame, (nw, nh), interpolation=interp)
+    canvas = np.zeros((win_h, win_w, 3), np.uint8)
+    canvas[:] = C_PANEL  # Dark background eliminates letterbox borders
+    x0, y0 = (win_w - nw) // 2, (win_h - nh) // 2
+    canvas[y0 : y0 + nh, x0 : x0 + nw] = frame
+    return canvas
+
+
 def _draw_hud(
     frame: np.ndarray,
     st: Dict[str, object],
@@ -401,7 +458,7 @@ def _draw_hud(
 
     # Help keybindings status
     help_y = bot_y + 92
-    help_str = "Q quit · C clear · R speak transcript · Backspace delete · F toggle fullscreen"
+    help_str = "Q quit | C clear | R speak transcript | Backspace delete | F toggle fullscreen"
     cv2.putText(frame, help_str, (16, help_y), F_SMALL, 0.40, C_MUTED, 1, cv2.LINE_AA)
 
 
@@ -513,9 +570,14 @@ def main(argv=None) -> int:
         return 1
 
     fullscreen = not args.windowed
+    cur_target = None
+    cur_fs = None
     try:
         cv2.namedWindow(WINDOW, cv2.WINDOW_NORMAL)
         if fullscreen:
+            size = _screen_size()
+            if size:
+                cv2.resizeWindow(WINDOW, size[0], size[1])
             cv2.setWindowProperty(WINDOW, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
         else:
             cv2.resizeWindow(WINDOW, 1280, 720)
@@ -591,9 +653,16 @@ def main(argv=None) -> int:
                 if tts.enabled:
                     tts.say_letter(emitted)
 
+            # Fit camera frame into window target canvas to eliminate letterbox/pillarbox borders
+            if cur_target is None or cur_fs != fullscreen:
+                cur_target = _target_size(w, h, fullscreen)
+                cur_fs = fullscreen
+
+            shown = _fit_to_window(frame, *cur_target)
+
             flash_age_ms = ((time.monotonic() - flash_t) * 1000.0) if flash_cand else None
             _draw_hud(
-                frame,
+                shown,
                 st,
                 left_ok=left_ok,
                 right_ok=right_ok,
@@ -604,7 +673,7 @@ def main(argv=None) -> int:
                 flash_age_ms=flash_age_ms,
             )
 
-            cv2.imshow(WINDOW, frame)
+            cv2.imshow(WINDOW, shown)
             k = cv2.waitKey(1) & 0xFF
             if k in (ord("q"), 27):
                 break
@@ -618,8 +687,13 @@ def main(argv=None) -> int:
                 rec.backspace()
             elif k in (ord("f"), ord("F")):
                 fullscreen = not fullscreen
+                cur_target = None
+                cur_fs = None
                 try:
                     if fullscreen:
+                        size = _screen_size()
+                        if size:
+                            cv2.resizeWindow(WINDOW, size[0], size[1])
                         cv2.setWindowProperty(WINDOW, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
                     else:
                         cv2.setWindowProperty(WINDOW, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_NORMAL)
