@@ -31,6 +31,7 @@ def _build_hand(
     yaw: float = 0.0,
     pitch: float = 0.0,
     roll: float = 0.0,
+    is_left: bool = False,
 ) -> np.ndarray:
     """Build a 21-landmark 3D hand point cloud based on finger state specifications."""
     wx, wy, wz = wrist
@@ -107,6 +108,10 @@ def _build_hand(
                 pts[idx_list[2]] = base + [0.000, 0.024, -0.034]
                 pts[idx_list[3]] = base + [0.000, 0.032, -0.026]
 
+    if is_left:
+        # Mirror x coordinates laterally across wrist x for authentic Left hand anatomy
+        pts[:, 0] = 2 * wx - pts[:, 0]
+
     # Optional 3D Rotation
     if abs(roll) > 1e-4 or abs(pitch) > 1e-4 or abs(yaw) > 1e-4:
         center = pts[0].copy()
@@ -126,14 +131,14 @@ def generate_word_landmarks(word: str) -> Tuple[List[np.ndarray], List[str]]:
     if w == "NAMASTE":
         # Both hands vertically upright, flat palms pressed together at chest
         left = _build_hand(
-            wrist=(0.47, 0.65, 0.0),
+            wrist=(0.48, 0.65, 0.0),
             thumb="extended", index="extended", middle="extended", ring="extended", pinky="extended",
-            roll=0.08,
+            is_left=True,
         )
         right = _build_hand(
-            wrist=(0.53, 0.65, 0.0),
+            wrist=(0.52, 0.65, 0.0),
             thumb="extended", index="extended", middle="extended", ring="extended", pinky="extended",
-            roll=-0.08,
+            is_left=False,
         )
         return [left, right], ["Left", "Right"]
 
@@ -175,25 +180,27 @@ def generate_word_landmarks(word: str) -> Tuple[List[np.ndarray], List[str]]:
             wrist=(0.40, 0.68, 0.0),
             thumb="extended", index="extended", middle="extended", ring="extended", pinky="extended",
             roll=0.55,
+            is_left=True,
         )
         right = _build_hand(
             wrist=(0.60, 0.68, 0.0),
             thumb="extended", index="extended", middle="extended", ring="extended", pinky="extended",
             roll=-0.55,
+            is_left=False,
         )
         return [left, right], ["Left", "Right"]
 
     elif w == "BOOK":
-        # Both open palms facing upward with pinky edges touching
+        # Both open palms facing upward with pinky edges touching side-by-side
         left = _build_hand(
-            wrist=(0.45, 0.66, 0.0),
+            wrist=(0.46, 0.66, 0.0),
             thumb="extended", index="extended", middle="extended", ring="extended", pinky="extended",
-            roll=-0.25,
+            is_left=True,
         )
         right = _build_hand(
-            wrist=(0.55, 0.66, 0.0),
+            wrist=(0.54, 0.66, 0.0),
             thumb="extended", index="extended", middle="extended", ring="extended", pinky="extended",
-            roll=0.25,
+            is_left=False,
         )
         return [left, right], ["Left", "Right"]
 
@@ -203,11 +210,13 @@ def generate_word_landmarks(word: str) -> Tuple[List[np.ndarray], List[str]]:
             wrist=(0.48, 0.68, 0.0),
             thumb="curled", index="curled", middle="curled", ring="curled", pinky="curled",
             roll=-1.40,  # horizontal base wrist
+            is_left=True,
         )
         right = _build_hand(
-            wrist=(0.52, 0.54, 0.0),
+            wrist=(0.52, 0.48, 0.0),
             thumb="curled", index="extended", middle="curled", ring="curled", pinky="curled",
-            roll=2.90,  # pointing down towards base wrist
+            roll=3.14,  # pointing down touching base wrist
+            is_left=False,
         )
         return [left, right], ["Left", "Right"]
 
