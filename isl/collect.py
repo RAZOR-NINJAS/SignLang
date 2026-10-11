@@ -199,7 +199,7 @@ def main(argv=None):
                     draw_landmarks(frame, landmarks)
 
             hand_count_ok = (visible_hands >= expected) if expected == 2 else (visible_hands >= 1)
-            ready = hand_count_ok and landmarks is not None
+            ready = (landmarks is not None and visible_hands >= 1)
             have = dataset.count_for(target)
 
             if recording is not None:
@@ -213,7 +213,7 @@ def main(argv=None):
                     misses = 0
                 else:
                     misses += 1
-                    if misses > 4 or len(recorded) >= wanted:
+                    if misses > 6 or len(recorded) >= wanted:
                         if len(recorded) >= 4:
                             total = dataset.append_samples(rec_label, recorded, source=session_tag)
                             last_msg = f"Saved {len(recorded)}/{wanted} ({rec_label} now {total} in {args.session})"
@@ -239,8 +239,8 @@ def main(argv=None):
                  0.5, (170, 170, 180), 1),
             ]
             if not hand_count_ok:
-                hint = "Show BOTH hands clearly" if expected == 2 else "Show single hand clearly"
-                lines.append((hint, 0.6, (0, 160, 255), 2))
+                hint = f"Tip: show both hands if possible (saw {visible_hands}) | SPACE captures anyway" if expected == 2 else "Show single hand clearly"
+                lines.append((hint, 0.55, (0, 180, 255), 1))
             elif ready:
                 lines.append(("Ready! Press SPACE to capture burst", 0.55, (0, 220, 120), 1))
 
@@ -262,8 +262,11 @@ def main(argv=None):
                 elif key == " ":
                     if ready and recording is None:
                         recording = ([], target, 0, BURST_FRAMES)
-                    elif not hand_count_ok:
-                        last_msg = f"Cannot capture: {target} requires {expected} hand(s) (saw {visible_hands})"
+                        if not hand_count_ok:
+                            last_msg = f"Capturing {target} with {visible_hands} hand(s)"
+                            print(f"\n  {last_msg}")
+                    elif not ready:
+                        last_msg = "No hands detected in frame"
                         msg_until = time.monotonic() + 2.0
                         print(f"\n  WARNING: {last_msg}")
                 elif key in ("n", "N"):

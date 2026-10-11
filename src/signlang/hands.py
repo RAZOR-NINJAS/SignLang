@@ -29,9 +29,9 @@ def _create_landmarker(delegate, num_hands=MAX_HANDS) -> "vision.HandLandmarker"
             ),
             running_mode=vision.RunningMode.VIDEO,
             num_hands=num_hands,
-            min_hand_detection_confidence=0.5,
-            min_hand_presence_confidence=0.5,
-            min_tracking_confidence=0.5,
+            min_hand_detection_confidence=0.35,
+            min_hand_presence_confidence=0.35,
+            min_tracking_confidence=0.35,
         )
     )
 
