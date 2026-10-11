@@ -199,7 +199,7 @@ def main(argv=None):
                     draw_landmarks(frame, landmarks)
 
             hand_count_ok = (visible_hands >= expected) if expected == 2 else (visible_hands >= 1)
-            ready = (landmarks is not None and visible_hands >= 1)
+            ready = hand_count_ok and landmarks is not None
             have = dataset.count_for(target)
 
             if recording is not None:
@@ -219,7 +219,7 @@ def main(argv=None):
                             last_msg = f"Saved {len(recorded)}/{wanted} ({rec_label} now {total} in {args.session})"
                             bursts_done += 1
                         else:
-                            last_msg = f"Only {len(recorded)} frames captured; hold steady and retry"
+                            last_msg = f"Only {len(recorded)} frames captured; hold steady with both hands and retry"
                         print(f"\n  {last_msg}")
                         msg_until = time.monotonic() + 2.5
                         recording = None
@@ -239,10 +239,10 @@ def main(argv=None):
                  0.5, (170, 170, 180), 1),
             ]
             if not hand_count_ok:
-                hint = f"Tip: show both hands if possible (saw {visible_hands}) | SPACE captures anyway" if expected == 2 else "Show single hand clearly"
-                lines.append((hint, 0.55, (0, 180, 255), 1))
+                hint = f"WAIT: Show BOTH hands (saw {visible_hands}) - Angle palms so camera sees both hands!" if expected == 2 else "Show single hand clearly"
+                lines.append((hint, 0.55, (0, 140, 255), 2))
             elif ready:
-                lines.append(("Ready! Press SPACE to capture burst", 0.55, (0, 220, 120), 1))
+                lines.append(("READY! Both hands detected. Press SPACE to capture burst", 0.55, (0, 255, 120), 2))
 
             if time.monotonic() < msg_until:
                 lines.append((last_msg, 0.55, (0, 220, 255), 1))
@@ -262,12 +262,9 @@ def main(argv=None):
                 elif key == " ":
                     if ready and recording is None:
                         recording = ([], target, 0, BURST_FRAMES)
-                        if not hand_count_ok:
-                            last_msg = f"Capturing {target} with {visible_hands} hand(s)"
-                            print(f"\n  {last_msg}")
-                    elif not ready:
-                        last_msg = "No hands detected in frame"
-                        msg_until = time.monotonic() + 2.0
+                    elif not hand_count_ok:
+                        last_msg = f"Cannot capture: {target} requires {expected} hands (saw {visible_hands}). Angle palms so camera sees both hands!"
+                        msg_until = time.monotonic() + 2.5
                         print(f"\n  WARNING: {last_msg}")
                 elif key in ("n", "N"):
                     idx = (idx + 1) % len(labels)
