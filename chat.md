@@ -106,3 +106,27 @@
 - **What is blocked**: None.
 - **What is next**: Section B: Installer TUI (`scripts/install_tui.py`).
 
+---
+
+### Section B: Flagship Installer TUI & Cross-Platform Bootstrap
+- **Status**: Completed
+- **What was done**:
+  1. Resolved Linux bootstrap environment issue in `install.sh`:
+     - Added robust directory detection ensuring `curl ... | bash` run from any location (e.g. `~`) switches to or clones into `${HOME}/Projects/signlang`.
+     - Added automated pip health check and `ensurepip` repair to handle existing broken/empty venvs without failure.
+  2. Overhauled `scripts/install_tui.py`:
+     - Built animated boot reveal with cyan-to-magenta gradient and scanning status indicator.
+     - Implemented live target environment dashboard auditing OS, Python 64-bit, CPU cores, system RAM (Windows `GlobalMemoryStatusEx` & Linux `/proc/meminfo`), camera presence, browser kiosk availability, disk free space (`shutil.disk_usage`), and port 8000 loopback binding.
+     - Implemented interactive mode selector table outlining resource profiles across ISL, ASL Letters, ASL Dynamic Words, Dino Kiosk Game, and Browser Learning.
+     - Built camera test step measuring hardware resolution and real-time capture FPS.
+     - Implemented multi-task download progress panels with transfer speeds, ETAs, and overall progress.
+     - Added non-admin Windows Desktop/Start Menu `.lnk` shortcut creation via PowerShell WScript.Shell and Linux `.desktop` entries.
+     - Integrated diagnostic health check table for landmarker CPU delegate, classifier model weights, and server sockets.
+     - Built final "You're All Set" screen with launch table for CLI, batch scripts, and shortcuts.
+     - Hardened against console encoding crashes on Windows classic cmd/PowerShell: added console code page 65001 detection, UTF-8 reconfiguration, and safe ASCII fallbacks for CP1252 charmap constraints.
+     - Implemented graceful failure panels with root cause diagnostic explanations and `install.log` output.
+     - Added `--yes`, `--no-color`, and `--repair` flags, plus clean `Ctrl+C` interrupt handling.
+- **What is blocked**: None.
+- **What is next**: Push Section B to GitHub, verify multi-platform CI on GitHub Actions, and confirm all acceptance criteria.
+
+

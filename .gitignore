@@ -33,3 +33,4 @@ en_US-lessac-medium.onnx.json
 
 # local scratch: .bak copies and a stale model from before retraining
 backups/
+install.log
