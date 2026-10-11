@@ -130,6 +130,8 @@ def main(argv=None):
     parser.add_argument("--only", default=None, help="Comma-separated subset of signs, e.g. A,B,C")
     parser.add_argument("--session", default="session1", help="Session tag for evaluation splitting (e.g. session1, session2)")
     parser.add_argument("--bursts", type=int, default=BURSTS_PER_LABEL, help="Bursts per sign (default: 4)")
+    parser.add_argument("--synthetic", "--generate", action="store_true", help="Generate synthetic samples instead of opening webcam.")
+    parser.add_argument("--samples", type=int, default=140, help="Number of synthetic samples per sign (default: 140)")
     args = parser.parse_args(args_list)
 
     labels = list(TRAIN_LABELS)
@@ -138,6 +140,20 @@ def main(argv=None):
         if wanted:
             labels = wanted
             print(f"  Restricted to {len(labels)} sign(s): {' '.join(labels)}")
+
+    if args.synthetic:
+        from .templates import generate_static_word_samples
+        from .config import STATIC_WORDS
+        target_words = [w for w in labels if w in STATIC_WORDS] if args.only else STATIC_WORDS
+        if not target_words:
+            print("No matching signs with synthetic templates found.")
+            return 1
+        print(f"Generating synthetic samples for {len(target_words)} sign(s)...")
+        counts = generate_static_word_samples(words=target_words, samples_per_word=args.samples)
+        for w, cnt in counts.items():
+            print(f"  {w:10s} : {cnt} samples")
+        print(f"\nSynthetic generation complete ({sum(counts.values())} samples). Run 'python main.py train' to train.")
+        return 0
 
     idx = 0
     bursts_done = 0
