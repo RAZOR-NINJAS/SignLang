@@ -15,6 +15,8 @@ def _argparse(rest):
                     help="comma-separated letters to allow, e.g. C,D,F")
     ap.add_argument("--no-camera", action="store_true",
                     help="do not open the camera at startup")
+    ap.add_argument("--kiosk", action="store_true",
+                    help="launch browser kiosk mode fullscreen")
     args = ap.parse_args(rest)
     if args.letters:
         args.letters = [c.strip().upper() for c in args.letters.split(",") if c.strip()]
@@ -26,6 +28,10 @@ def main(argv=None):
     cmd = argv[0] if argv else "help"
     rest = argv[1:]
 
+    if cmd == "doctor":
+        from .doctor import main as doctor_main
+
+        return doctor_main(rest)
     if cmd == "collect":
         return collect._main()
     if cmd == "train":
@@ -52,6 +58,7 @@ def main(argv=None):
             source=args.source,
             include=args.letters,
             camera=not args.no_camera,
+            kiosk=args.kiosk,
         )
     if cmd in ("export", "import"):
         from .transfer import main as transfer_main

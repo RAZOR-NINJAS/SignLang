@@ -44,6 +44,7 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
             parser.print_help()
             print("\nExamples:")
             print("  python main.py                      # Run ISL live recognition (default)")
+            print("  python main.py doctor               # Run system diagnostics and self-test")
             print("  python main.py collect              # Record ISL two-handed samples (default mode)")
             print("  python main.py train                # Train ISL classifier (default mode)")
             print("  python main.py eval                 # Evaluate ISL model (default mode)")
@@ -54,6 +55,11 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
             return 0
         else:
             rest = list(rest) + ["--help"]
+
+    # Global doctor dispatch
+    if rest and rest[0] == "doctor":
+        from signlang.doctor import main as doctor_main
+        return doctor_main(rest[1:])
 
     # Strict isolation: letters mode MUST NOT import words
     if args.mode == "letters":

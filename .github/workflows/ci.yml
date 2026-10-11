@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main", "windows-support" ]
+  pull_request:
+    branches: [ "main", "windows-support" ]
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest rich
+
+      - name: Fetch Required Test Models
+        run: |
+          python scripts/fetch_models.py
+
+      - name: Run Pytest Suite
+        run: |
+          pytest -v
+
+      - name: Run System Doctor Check
+        run: |
+          python main.py doctor
+
+      - name: Test TUI Installer Headless
+        run: |
+          python scripts/install_tui.py --yes

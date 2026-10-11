@@ -364,47 +364,104 @@ Every command below is documented with its complete directory path and virtual e
 
 ## 🛠️ System Installation & Deployment
 
-<details open>
-<summary><b>Standard POSIX Installation (Linux / macOS)</b></summary>
+### ⚡ Quickstart: Zero-Prerequisite Bootstrap Installers
+
+#### Windows 10 / 11 (One-Liner PowerShell)
+Open PowerShell (Standard User, no Admin rights needed) and run:
+
+```powershell
+irm https://raw.githubusercontent.com/RAZOR-NINJAS/signlang/main/install.ps1 | iex
+```
+
+*What this automated bootstrap does:*
+1. Automatically verifies or installs Python 3.11 (via `winget` or direct official download with user-level flags).
+2. Clones the repository or downloads the release ZIP if Git is missing.
+3. Configures `.venv`, installs PyTorch CPU, MediaPipe, OpenCV, and Rich.
+4. Downloads MediaPipe landmarker and Piper neural TTS voice models.
+5. Launches the interactive setup wizard with camera testing, and creates **Desktop** and **Start Menu** shortcuts (`SignLang.lnk`).
+
+#### Linux (Arch / Omarchy / Ubuntu / Debian)
+Clone and run the native installer:
 
 ```bash
-# Clone source repository
-git clone https://github.com/RAZOR-NINJAS/SignLang.git
-cd SignLang
+git clone https://github.com/RAZOR-NINJAS/signlang.git
+cd signlang
+./install.sh
+```
 
-# Initialize isolated Python virtual environment
-python3 -m venv .venv
-source .venv/bin/activate
+---
 
-# Install signlang in editable mode
+### 💻 Manual Installation
+
+<details>
+<summary><b>Manual Windows Installation Steps</b></summary>
+
+```powershell
+# 1. Clone repository
+git clone https://github.com/RAZOR-NINJAS/signlang.git
+cd signlang
+
+# 2. Create Python 3.11 virtual environment
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 3. Upgrade pip and install signlang
+python -m pip install --upgrade pip
 pip install -e .
+pip install rich
 
-# Fetch MediaPipe landmark models and Piper neural TTS voice
-bash scripts/fetch_models.sh
+# 4. Fetch MediaPipe landmarker and Piper TTS voice models
+python scripts\fetch_models.py
+
+# 5. Run diagnostic self-test
+python main.py doctor
+
+# 6. Launch SignLang
+.\signlang.bat
 ```
 
 </details>
 
 <details>
-<summary><b>Windows Installation (PowerShell)</b></summary>
+<summary><b>Manual Linux / macOS Installation Steps</b></summary>
 
-```powershell
-# Clone source repository
-git clone https://github.com/RAZOR-NINJAS/SignLang.git
-cd SignLang
+```bash
+# 1. Clone repository
+git clone https://github.com/RAZOR-NINJAS/signlang.git
+cd signlang
 
-# Initialize isolated Python virtual environment
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
+# 2. Initialize virtual environment (Python 3.11 or 3.12)
+python3 -m venv .venv
+source .venv/bin/activate
 
-# Install signlang in editable mode
+# 3. Install in editable mode
+pip install --upgrade pip
 pip install -e .
+pip install rich
 
-# Fetch MediaPipe landmark models and Piper neural TTS voice
-python scripts\fetch_models.py
+# 4. Fetch models
+python scripts/fetch_models.py
+
+# 5. Run diagnostic self-test
+python main.py doctor
+
+# 6. Launch SignLang (ISL primary mode)
+python main.py
 ```
 
 </details>
+
+---
+
+## 🩺 System Doctor (`signlang doctor`)
+
+Run the built-in diagnostic suite anytime to verify hardware, camera backends, vision models, and TTS subsystems:
+
+```bash
+python main.py doctor
+# Or in CI / headless scripts:
+python main.py doctor --check-only
+```
 
 ---
 
