@@ -341,67 +341,132 @@ def run_system_check_dashboard(console: "Console", unattended: bool) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Key Reading Helper
+# ---------------------------------------------------------------------------
+def read_single_key() -> str:
+    """Read a single keypress, supporting arrow keys and spacebar portably."""
+    if sys.platform == "win32":
+        try:
+            import msvcrt
+            ch = msvcrt.getch()
+            if ch in (b"\x00", b"\xe0"):
+                ch2 = msvcrt.getch()
+                if ch2 == b"H":
+                    return "up"
+                elif ch2 == b"P":
+                    return "down"
+                return "other"
+            if ch == b" ":
+                return "space"
+            if ch in (b"\r", b"\n"):
+                return "enter"
+            if ch in (b"\x03", b"\x1b"):
+                return "escape"
+            return ch.decode("latin1", errors="ignore")
+        except Exception:
+            return "enter"
+    else:
+        try:
+            import select
+            import termios
+            import tty
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
+            try:
+                tty.setcbreak(fd)
+                ch = sys.stdin.read(1)
+                if ch == "\x1b":
+                    if select.select([sys.stdin], [], [], 0.05)[0]:
+                        ch2 = sys.stdin.read(1)
+                        if ch2 == "[":
+                            ch3 = sys.stdin.read(1)
+                            if ch3 == "A":
+                                return "up"
+                            elif ch3 == "B":
+                                return "down"
+                    return "escape"
+                if ch == " ":
+                    return "space"
+                if ch in ("\r", "\n"):
+                    return "enter"
+                if ch == "\x03":
+                    return "escape"
+                return ch
+            finally:
+                termios.tcsetattr(fd, termios.TCSADRAIN, old)
+        except Exception:
+            return "enter"
+
+
+# ---------------------------------------------------------------------------
 # Step 3: Interactive Mode Picker
 # ---------------------------------------------------------------------------
 def configure_modes(console: "Console", unattended: bool) -> Dict[str, bool]:
-    """Select which sign recognition modes to enable."""
+    """Select which sign recognition modes to enable using arrow keys & spacebar."""
     console.print("[bold cyan]─── Step 2 of 6: Recognition Modes Selection ──────────────────[/bold cyan]")
     
-    modes_table = Table(border_style="dim", show_header=True)
-    modes_table.add_column("Mode", style="bold cyan", width=22)
-    modes_table.add_column("Description", style="white")
-    modes_table.add_column("Resource Cost", style="magenta", width=16)
+    mode_items = [
+        ("isl", "🤲 ISL Two-Handed", "Indian Sign Language (A-Z + words). Dual-hand canonical.", "Very Low (CPU)"),
+        ("asl_letters", "🔤 ASL Letters", "American Sign Language fingerspelling + custom space sign.", "Ultra Low (CPU)"),
+        ("asl_words", "🏃 ASL Dynamic Words", "Body + hands holistic motion sequences with DTW-kNN.", "Moderate (CPU)"),
+        ("game", "🦖 Offline Dino Game", "Hands-controlled arcade runner in fullscreen kiosk.", "Low (CPU)"),
+        ("learning", "🎓 Browser Learning", "Interactive web drills at http://localhost:8000.", "Low (Browser)"),
+    ]
 
-    modes_table.add_row(
-        "🤲 ISL Two-Handed",
-        "Indian Sign Language (A-Z + words). Dual-hand canonical geometry.",
-        "Very Low (CPU)",
-    )
-    modes_table.add_row(
-        "🔤 ASL Letters",
-        "American Sign Language fingerspelling + custom space sign.",
-        "Ultra Low (CPU)",
-    )
-    modes_table.add_row(
-        "🏃 ASL Dynamic Words",
-        "Body + hands holistic motion sequences with DTW-kNN.",
-        "Moderate (CPU)",
-    )
-    modes_table.add_row(
-        "🦖 Offline Dino Game",
-        "Hands-controlled arcade runner in fullscreen kiosk.",
-        "Low (CPU)",
-    )
-    modes_table.add_row(
-        "🎓 Browser Learning",
-        "Interactive web drills at http://localhost:8000.",
-        "Low (Browser)",
-    )
-    console.print(modes_table)
-    console.print()
+    selected = {k: True for k, _, _, _ in mode_items}
 
-    modes = {
-        "isl": True,
-        "asl_letters": True,
-        "asl_words": True,
-        "game": True,
-        "learning": True,
-    }
+    if unattended or not (sys.stdin and sys.stdin.isatty()):
+        t = Table(border_style="dim", show_header=True)
+        t.add_column("Mode", style="bold cyan", width=22)
+        t.add_column("Description", style="white")
+        t.add_column("Resource Cost", style="magenta", width=16)
+        for _, name, desc, cost in mode_items:
+            t.add_row(name, desc, cost)
+        console.print(t)
+        console.print(f"  [green]{ICON_PASS}[/green] All 5 modes enabled with recommended defaults.\n")
+        return selected
 
-    if unattended:
-        console.print(f"  [green]{ICON_PASS}[/green] All 5 modes enabled with full functionality.\n")
-        return modes
+    current_idx = 0
 
-    enable_all = Confirm.ask("  Enable all modes with full functionality?", default=True)
-    if not enable_all:
-        modes["isl"] = Confirm.ask("    Enable ISL Two-Handed mode?", default=True)
-        modes["asl_letters"] = Confirm.ask("    Enable ASL Fingerspelling mode?", default=True)
-        modes["asl_words"] = Confirm.ask("    Enable ASL Dynamic Words mode?", default=True)
-        modes["game"] = Confirm.ask("    Enable Dino Arcade Game?", default=True)
-        modes["learning"] = Confirm.ask("    Enable Browser Learning Kiosk?", default=True)
+    def make_picker_table(cursor: int) -> Table:
+        t = Table(border_style="cyan", show_header=True, title="Mode Selection [↑/↓ Navigate • Space Toggle • Enter Confirm]")
+        t.add_column("Active", width=8, justify="center")
+        t.add_column("Mode", width=24)
+        t.add_column("Description")
+        t.add_column("Cost", width=16, style="magenta")
 
-    console.print()
-    return modes
+        for i, (k, name, desc, cost) in enumerate(mode_items):
+            is_checked = selected[k]
+            check_box = f"[bold green][X][/bold green]" if is_checked else f"[dim][ ][/dim]"
+            if i == cursor:
+                prefix = f"[bold cyan]>[/bold cyan] {check_box}"
+                row_style = "bold white"
+            else:
+                prefix = f"  {check_box}"
+                row_style = "dim" if not is_checked else "white"
+
+            t.add_row(prefix, name, desc, cost, style=row_style)
+        return t
+
+    with Live(make_picker_table(current_idx), console=console, refresh_per_second=20) as live:
+        while True:
+            key = read_single_key()
+            if key == "up":
+                current_idx = max(0, current_idx - 1)
+                live.update(make_picker_table(current_idx))
+            elif key == "down":
+                current_idx = min(len(mode_items) - 1, current_idx + 1)
+                live.update(make_picker_table(current_idx))
+            elif key == "space":
+                k = mode_items[current_idx][0]
+                selected[k] = not selected[k]
+                live.update(make_picker_table(current_idx))
+            elif key in ("enter", "escape"):
+                break
+
+    enabled_count = sum(1 for v in selected.values() if v)
+    console.print(f"  [green]{ICON_PASS}[/green] Configured: [bold cyan]{enabled_count} of 5 modes enabled[/bold cyan].\n")
+    return selected
 
 
 # ---------------------------------------------------------------------------
