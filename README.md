@@ -1,4 +1,4 @@
-# 🤟 SignLang: Real-Time Edge ASL Recognition Engine
+# 🤟 SignLang: Real-Time Edge ISL & ASL Recognition Engine
 
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-blue.svg?logo=python&logoColor=white)](https://python.org)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.14%2B-EE4C2C.svg?logo=pytorch&logoColor=white)](https://pytorch.org)
