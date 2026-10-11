@@ -231,7 +231,7 @@ def make_handler(hub, stop_event):
 
 
 def serve(host="127.0.0.1", port=8000, source=None, config=None,
-          include=None, exclude=None, camera=True):
+          include=None, exclude=None, camera=True, kiosk=False):
     """Start the game. Blocks until Ctrl+C."""
     hub = GameHub(source=source, config=config, include=include, exclude=exclude)
     stop_event = threading.Event()
@@ -254,6 +254,12 @@ def serve(host="127.0.0.1", port=8000, source=None, config=None,
     shown = f"http://{host}:{port}"
     print(f"  open: {shown}")
     print("  press Ctrl+C to stop")
+
+    kiosk_proc = None
+    if kiosk:
+        from .kiosk import launch_browser_kiosk
+        kiosk_proc = launch_browser_kiosk(shown, kiosk=True)
+
     try:
         server.serve_forever()
     except KeyboardInterrupt:
@@ -261,5 +267,10 @@ def serve(host="127.0.0.1", port=8000, source=None, config=None,
     finally:
         stop_event.set()
         hub.stop_detector()
+        if kiosk_proc is not None:
+            try:
+                kiosk_proc.terminate()
+            except Exception:
+                pass
         server.shutdown()
         server.server_close()
