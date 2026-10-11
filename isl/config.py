@@ -18,20 +18,47 @@ ALL_LETTERS = list("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 # Phase 1 static letters (excluding dynamic motion letters J and Z)
 STATIC_LETTERS = [c for c in ALL_LETTERS if c not in ("J", "Z")]
 SPECIAL_SIGNS = ["SPACE"]
-TRAIN_LABELS = STATIC_LETTERS + SPECIAL_SIGNS
+
+# Static ISL Words (iconic signs requiring no hand movement)
+STATIC_WORDS = [
+    "NAMASTE",  # Both flat hands joined at chest in prayer/greeting [2 hands]
+    "GOOD",     # Thumbs up gesture [1 hand]
+    "BAD",      # Pinky finger extended upright [1 hand]
+    "PEACE",    # V-sign with index & middle fingers [1 hand]
+    "OK",       # Thumb & index forming a circle/ring, 3 fingers up [1 hand]
+    "HOUSE",    # Both hands with fingertips touching to form a roof [2 hands]
+    "BOOK",     # Both open palms facing upward touching pinky edges [2 hands]
+    "TIME",     # Dominant index pointing at base wrist [2 hands]
+    "LOVE",     # Thumb, index, and pinky extended [1 hand]
+    "STOP",     # Open flat palm facing forward [1 hand]
+]
+
+TRAIN_LABELS = STATIC_LETTERS + SPECIAL_SIGNS + STATIC_WORDS
 
 # Expected number of hands per sign (1 or 2):
-# - 1-hand: C, L, V (iconic single-hand letters) and SPACE (custom single-hand gesture).
-# - 2-hands: A, B, D-I, K, M-U, W-Y (ISLRTC standard two-handed signs).
+# - 1-hand: C, L, V, SPACE, GOOD, BAD, PEACE, OK, LOVE, STOP
+# - 2-hands: A, B, D-I, K, M-U, W-Y, NAMASTE, HOUSE, BOOK, TIME
 EXPECTED_HANDS = {
+    # Letters (24 static + dynamic J, Z)
     "A": 2, "B": 2, "C": 1, "D": 2, "E": 2, "F": 2, "G": 2, "H": 2,
     "I": 2, "J": 2, "K": 2, "L": 1, "M": 2, "N": 2, "O": 2, "P": 2,
     "Q": 2, "R": 2, "S": 2, "T": 2, "U": 2, "V": 1, "W": 2, "X": 2,
     "Y": 2, "Z": 2, "SPACE": 1,
+    # Static Words
+    "NAMASTE": 2,
+    "GOOD": 1,
+    "BAD": 1,
+    "PEACE": 1,
+    "OK": 1,
+    "HOUSE": 2,
+    "BOOK": 2,
+    "TIME": 2,
+    "LOVE": 1,
+    "STOP": 1,
 }
 
 IS_STATIC = {
-    k: (k not in ("J", "Z")) for k in ALL_LETTERS + SPECIAL_SIGNS
+    k: (k not in ("J", "Z")) for k in ALL_LETTERS + SPECIAL_SIGNS + STATIC_WORDS
 }
 
 # MediaPipe landmark indices

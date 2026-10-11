@@ -100,12 +100,24 @@ flowchart TD
 * **Full Transcript Narration**: Pressing **`R`** triggers immediate synthesis and playback of the entire accumulated text buffer.
 * **Thread-Safe Architecture**: Decoupled background worker queue prevents audio operations from stalling the video frame loop.
 
-### 4. Indian Sign Language (ISL Mode)
+### 4. Indian Sign Language (ISL Mode - Default)
+* **Default Mode**: `python main.py` directly boots into real-time ISL mode with zero configuration.
 * **Standard Grounding**: Based on the standardized manual alphabet established by the **Indian Sign Language Research and Training Centre (ISLRTC)**, DEPwD, Govt. of India.
 * **Dual-Hand Tracking**: Configures MediaPipe Tasks API with `num_hands=2` to track both hands simultaneously.
+* **Movement-Free Static Words**: In addition to manual alphabet fingerspelling, recognizes 10 iconic, static ISL word gestures:
+  * **NAMASTE** (2 hands): Flat palms joined vertically at chest in traditional prayer/greeting.
+  * **GOOD** (1 hand): Thumbs-up gesture with all other fingers curled into a fist.
+  * **BAD** (1 hand): Pinky extended upright (*katti* gesture) with all other fingers curled.
+  * **PEACE** (1 hand): V-sign with index and middle fingers extended upright.
+  * **OK** (1 hand): Thumb and index fingertips touching in a ring, other 3 fingers extended.
+  * **HOUSE** (2 hands): Fingertips of both flat hands touching at an angle forming a triangular roof.
+  * **BOOK** (2 hands): Both open palms facing upward touching pinky edges side-by-side.
+  * **TIME** (2 hands): Dominant index finger touching the back of the base wrist.
+  * **LOVE** (1 hand): Thumb, index, and pinky fingers extended upright (I-Love-You gesture).
+  * **STOP** (1 hand): Open flat palm facing forward toward camera.
 * **Canonical 164-Dimensional Feature Representation**: Canonicalizes hand slots (`slot_left`, `slot_right`), computes 74 invariant geometric features per hand, zero-imputes absent hands, adds 14 inter-hand interaction features (wrist offset, inter-palm distance, fingertip proximities), and 2 hand-presence indicator flags.
 * **Pure NumPy Live Inference**: The live HUD uses an ultra-fast NumPy forward pass (`<0.05 ms`, negligible RAM), avoiding PyTorch import overhead on memory- and thermal-constrained edge machines (e.g. 3.7 GiB laptops).
-* **Scope & Honesty**: Phase 1 covers the 24 static letters (**A through Y except dynamic motion letters J and Z**) plus a single-handed custom **SPACE** gesture. Dynamic letters (J, Z) and holistic signs are deferred to the Phase 2 sequence roadmap. Dataset results reflect single-signer cross-session validation until multi-signer data is added.
+* **Word Emission Formatting**: Confirmed static word signs automatically emit with surrounding whitespace delimiters (e.g. `" NAMASTE "`), while alphabet characters append sequentially.
 
 ### 5. Interactive Browser Shadow-Play Game
 * **Mechanism**: Chrome Dino-style obstacle runner game hosted via Python's standard library HTTP server.

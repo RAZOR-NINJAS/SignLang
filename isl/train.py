@@ -60,7 +60,12 @@ def split_by_session_or_burst(
         val_sess = sorted_sess[-1]  # Hold out newest session for validation
         tr_idx = np.flatnonzero([not str(s).startswith(val_sess) for s in sources])
         va_idx = np.flatnonzero([str(s).startswith(val_sess) for s in sources])
-        if len(tr_idx) > 0 and len(va_idx) > 0:
+        if (
+            len(tr_idx) > 0
+            and len(va_idx) > 0
+            and len(np.unique(y[tr_idx])) == n_classes
+            and len(np.unique(y[va_idx])) == n_classes
+        ):
             return tr_idx, va_idx, f"cross-session (val: {val_sess})"
 
     # Fallback to stratified burst splitting
@@ -113,8 +118,12 @@ def main(argv=None):
     print(f"ISL Training: {len(X)} samples across {len(labels)} signs | Split: {split_desc}")
     print(f"  Train: {len(tr_idx)} | Validation: {len(va_idx)}")
 
-    mean = X[tr_idx].mean(axis=0)
-    std = X[tr_idx].std(axis=0) + 1e-6
+    # Symmetrize mean and std across original and mirrored training features
+    X_mirr = np.array([mirror_feature_vector(row) for row in X[tr_idx]])
+    X_all_train = np.concatenate([X[tr_idx], X_mirr], axis=0)
+    mean = X_all_train.mean(axis=0)
+    std = X_all_train.std(axis=0)
+    std = np.where(std < 0.05, 1.0, std)
 
     train_set = ISLLandmarkDataset(X[tr_idx], y[tr_idx], mean, std, augment=not args.no_augment, seed=args.seed)
     val_set = ISLLandmarkDataset(X[va_idx], y[va_idx], mean, std, augment=False, seed=args.seed)

@@ -27,6 +27,7 @@ from .config import (
     SPACE_COOLDOWN_MS,
     SPACE_DWELL_MS,
     STABLE_MARGIN,
+    STATIC_WORDS,
     WEIGHTS_PATH,
 )
 from .features import extract_features
@@ -242,11 +243,16 @@ class ISLDwellRecognizer:
             self.dwell_progress = min(1.0, elapsed_ms / target_dwell)
             if self.dwell_progress >= 1.0:
                 # Sign confirmed
-                emitted = " " if cand == "SPACE" else cand
+                if cand == "SPACE":
+                    emitted = " "
+                elif cand in STATIC_WORDS:
+                    emitted = f"{cand} " if (not self.buffer or self.buffer.endswith(" ")) else f" {cand} "
+                else:
+                    emitted = cand
                 self.buffer += emitted
                 self.last_emitted = cand
                 self.cooldown_until = now + (
-                    SPACE_COOLDOWN_MS if cand == "SPACE" else REPEAT_COOLDOWN_MS
+                    SPACE_COOLDOWN_MS if cand in ("SPACE", *STATIC_WORDS) else REPEAT_COOLDOWN_MS
                 ) / 1000.0
                 self.cur_dwell_start = None
                 self.dwell_progress = 0.0
@@ -382,7 +388,7 @@ def _draw_hud(
 
         disp_sign = ("SPACE" if cand == "SPACE" else (cand or "--"))
         col_sign = C_BRIGHT if dwell > 0.0 else C_DIM
-        font_scale = 1.6 if len(disp_sign) <= 2 else 0.8
+        font_scale = 1.6 if len(disp_sign) <= 2 else (0.90 if len(disp_sign) <= 4 else 0.60)
         (tw, th), _ = cv2.getTextSize(disp_sign, F_BIG, font_scale, 2)
         cv2.putText(frame, disp_sign, (card_x + (card_w - tw) // 2, card_y + 70), F_BIG, font_scale, col_sign, 2, cv2.LINE_AA)
 
@@ -415,8 +421,8 @@ def _draw_hud(
                 lbl = str(item["label"])
                 p = float(item["prob"])
                 ry = alt_y + 28 + i * 34
-                cv2.putText(frame, lbl[:5], (alt_x + 10, ry), F_SMALL, 0.45, C_DIM, 1, cv2.LINE_AA)
-                bx0, bx1 = alt_x + 55, alt_x + alt_w - 10
+                cv2.putText(frame, lbl[:7], (alt_x + 10, ry), F_SMALL, 0.40 if len(lbl) > 4 else 0.45, C_DIM, 1, cv2.LINE_AA)
+                bx0, bx1 = alt_x + 65, alt_x + alt_w - 10
                 by0, by1 = ry - 10, ry - 4
                 cv2.rectangle(frame, (bx0, by0), (bx1, by1), C_TRACK, -1)
                 bw = bx0 + int((bx1 - bx0) * p)
@@ -430,10 +436,10 @@ def _draw_hud(
         rad = int(35 + 50 * prog)
         ring_col = tuple(int(c * fade) for c in C_GOOD)
         cv2.circle(frame, (cx, cy), rad, ring_col, max(1, int(4 * fade)), cv2.LINE_AA)
-        fl_sign = "SPACE" if flash_cand == " " else flash_cand
-        fs_scale = 2.2
-        (fw, fh), _ = cv2.getTextSize(fl_sign, F_BIG, fs_scale, 3)
-        cv2.putText(frame, fl_sign, (cx - fw // 2, cy + fh // 2), F_BIG, fs_scale, ring_col, 3, cv2.LINE_AA)
+        fl_sign = "SPACE" if flash_cand == " " else str(flash_cand).strip()
+        fs_scale = 2.2 if len(fl_sign) <= 2 else (1.4 if len(fl_sign) <= 4 else 1.0)
+        (fw, fh), _ = cv2.getTextSize(fl_sign, F_BIG, fs_scale, 2 if len(fl_sign) > 4 else 3)
+        cv2.putText(frame, fl_sign, (cx - fw // 2, cy + fh // 2), F_BIG, fs_scale, ring_col, 2 if len(fl_sign) > 4 else 3, cv2.LINE_AA)
 
     # Bottom Panel: Recent strip, Transcript, Status line
     bot_h = 110
@@ -447,8 +453,13 @@ def _draw_hud(
     rx = 85
     for i, s in enumerate(recent[:RECENT_MAX]):
         badge_col = C_GOOD if i == 0 else C_DIM
-        cv2.putText(frame, s, (rx, rec_y), F_SMALL, 0.50, badge_col, 1, cv2.LINE_AA)
-        rx += 26
+        disp_s = "_" if s == " " else str(s).strip()
+        f_scale = 0.40 if len(disp_s) > 3 else 0.50
+        cv2.putText(frame, disp_s, (rx, rec_y), F_SMALL, f_scale, badge_col, 1, cv2.LINE_AA)
+        step_w = max(26, len(disp_s) * 9 + 14)
+        rx += step_w
+        if rx > w - 40:
+            break
 
     # Transcript line
     trans_y = bot_y + 58
