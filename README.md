@@ -1,6 +1,6 @@
 <div align="center">
 
-```
+```text
   ███████╗██╗ ██████╗ ███╗   ██╗██╗      █████╗ ███╗   ██╗ ██████╗ 
   ██╔════╝██║██╔════╝ ████╗  ██║██║     ██╔══██╗████╗  ██║██╔════╝ 
   ███████╗██║██║  ███╗██╔██╗ ██║██║     ███████║██╔██╗ ██║██║  ███╗
@@ -9,18 +9,17 @@
   ╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ 
 ```
 
-### ⚡ Real-Time Edge ISL & ASL Recognition Engine
-**Offline • Two-Handed ISL • ASL Fingerspelling • Dynamic Words • Browser Shadow-Play Dino Game**
+### ⚡ Next-Generation Edge Sign Language Recognition & Translation Engine
+**Indian Sign Language (ISL)** • **ASL Fingerspelling** • **Dynamic Words (DTW)** • **Browser Shadow-Play Kiosk**
 
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB.svg?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Platform](https://img.shields.io/badge/Platform-Windows_10%2F11_%7C_Linux-0078D6.svg?style=for-the-badge&logo=windows&logoColor=white)](#-quickstart--zero-prerequisite-installers)
-[![CI Status](https://img.shields.io/badge/CI-Ubuntu_%26_Windows_Latest-238636.svg?style=for-the-badge&logo=githubactions&logoColor=white)](.github/workflows/ci.yml)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.14%2B-EE4C2C.svg?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
-[![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.21-007ACC.svg?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
-[![Capture Backend](https://img.shields.io/badge/Camera-DirectShow_%7C_V4L2-8A2BE2.svg?style=for-the-badge&logo=opencv&logoColor=white)](#-cross-platform-hardware-acceleration)
-[![Piper TTS](https://img.shields.io/badge/TTS-Piper_Neural_ONNX-00A389.svg?style=for-the-badge)](https://github.com/rhasspy/piper)
-[![Test Coverage](https://img.shields.io/badge/Tests-103%2F103_Passing-brightgreen.svg?style=for-the-badge)](#-rigorous-evaluation--empirical-benchmarks)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+[![OS - Windows & Linux](https://img.shields.io/badge/Platform-Windows%2010%2F11%20%7C%20Linux-0078D6?style=for-the-badge&logo=windows&logoColor=white)](#-zero-prerequisite-quickstart)
+[![CI Status](https://img.shields.io/badge/CI-Passing%20(Ubuntu%20%2B%20Windows)-2ea44f?style=for-the-badge&logo=githubactions&logoColor=white)](#-rigorous-evaluation--empirical-benchmarks)
+[![Python 3.11+](https://img.shields.io/badge/Python-3.11%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.14%2B%20(CPU)-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)](https://pytorch.org)
+[![MediaPipe](https://img.shields.io/badge/MediaPipe-0.10.21-007ACC?style=for-the-badge&logo=google&logoColor=white)](https://developers.google.com/mediapipe)
+[![Tests Passing](https://img.shields.io/badge/Tests-103%2F103%20Passing-brightgreen?style=for-the-badge&logo=pytest&logoColor=white)](#-rigorous-evaluation--empirical-benchmarks)
+[![Zero Cloud](https://img.shields.io/badge/Privacy-100%25%20Offline%20Edge-informational?style=for-the-badge&logo=lock&logoColor=white)](#-executive-summary)
+[![License: MIT](https://img.shields.io/badge/License-MIT-F7DF1E?style=for-the-badge&logo=open-source-initiative&logoColor=black)](LICENSE)
 
 ---
 
@@ -28,54 +27,49 @@
 
 ## 📌 Executive Summary
 
-**SignLang** is a high-throughput, edge-native sign language translation engine with **Indian Sign Language (ISL)** as its primary mode alongside American Sign Language (ASL) fingerspelling, dynamic word-sign translation, and an interactive browser shadow-play game.
+**SignLang** is a high-throughput, edge-native sign language translation engine with **Indian Sign Language (ISL)** as its primary mode alongside American Sign Language (ASL) fingerspelling and dynamic word-sign translation. Built with an active hardware delegate (OpenGL/EGL GPU acceleration on Linux and low-latency DirectShow on Windows) alongside lightweight pure-NumPy inference, the system executes **100% offline** with zero cloud latency, zero external API fees, and absolute biometric privacy.
 
-Engineered to operate seamlessly on **both Windows 10/11 and Linux** (including bare, fresh laptops with low-end 2-core CPUs and ~4 GB RAM), SignLang features an active GPU delegate (OpenGL/EGL) with CPU fallback, native **DirectShow** (Windows) and **V4L2** (Linux) capture pipelines, and an asynchronous offline Piper Neural Text-to-Speech (TTS) engine.
-
-```
-┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                               🚀 CORE ARCHITECTURAL PILLARS                            │
-├────────────────────────────────────────────────────────────────────────────────────────┤
-│  🇮🇳  Primary ISL Two-Hand Mode     │ Standardized on ISLRTC 2-handed manual alphabet   │
-│  🖐️  ASL Fingerspelling (Letters) │ 26 classes (A–Y + custom SPACE) with dwell ring    │
-│  📈  ASL Dynamic Words (Words)    │ Temporal sequence recognition via DTW + k-NN       │
-│  🦖  Sign Dino Shadow-Play Game   │ Fullscreen browser kiosk game at localhost:8000    │
-│  🪟  First-Class Windows Support  │ DirectShow (cv2.CAP_DSHOW), Edge/Chrome kiosk      │
-│  ⚡  Zero-Prereq Bootstrap Wizard │ 1-liner PowerShell install + interactive Rich TUI  │
-│  🩺  System Doctor (Self-Test)    │ Integrated diagnostic suite (signlang doctor)      │
-│  🔒  Strict Biometric Privacy     │ 100% offline; zero images or video stored on disk  │
-└────────────────────────────────────────────────────────────────────────────────────────┘
-```
+### 🌟 Core Highlights
+* 🇮🇳 **Primary ISL Two-Hand Mode**: Standardized on official **ISLRTC** manual alphabet + 10 iconic static word signs with 164-dimensional dual-hand geometry.
+* 🪟 **First-Class Windows 10/11 Support**: Zero-prerequisite bootstrap (`install.ps1`), DirectShow unbuffered capture (`cv2.CAP_DSHOW`), `msvcrt` keyboard polling, and Edge kiosk browser launcher.
+* 🚀 **Zero-Prerequisite Interactive Installer**: Gorgeous ASCII art TUI setup wizard with gradient banners, webcam testing, model auto-downloading, and Start Menu / Desktop shortcut generation.
+* 🩺 **SignLang System Doctor**: Built-in 10-point diagnostic engine (`signlang doctor`) that verifies environment, cameras, vision models, audio pipelines, and loopback networking.
+* 🦖 **Sign Dino Shadow-Play Game**: Chrome Dino-style obstacle runner in fullscreen kiosk mode (`--kiosk`) via Microsoft Edge or Google Chrome.
+* 🔊 **Zero-Latency Neural Speech**: In-memory pre-cached Piper ONNX neural voice for immediate spoken feedback upon sign confirmation.
+* 🛡️ **Absolute Biometric Privacy**: No raw camera frames or biometric images are ever saved to disk; all processing runs on normalized 3D landmark coordinates.
 
 ---
 
-## ⚡ Quickstart — Zero-Prerequisite Installers
+## ⚡ Zero-Prerequisite Quickstart
 
-### 🪟 Windows 10 / 11 (Automated PowerShell One-Liner)
-
-On a fresh, bare Windows laptop (no Python, no Git, and no admin rights needed), open **PowerShell** and run:
+### 🪟 Windows 10 / 11 (Automated One-Liner)
+Run in PowerShell (Standard User account — **no admin rights required**):
 
 ```powershell
 irm https://raw.githubusercontent.com/RAZOR-NINJAS/signlang/main/install.ps1 | iex
 ```
 
-<details>
-<summary><b>🔍 What this automated bootstrap does under the hood</b></summary>
+> **What the Windows bootstrap does automatically:**
+> 1. Verifies Python 3.11. If absent, installs it silently to user space via `winget` or direct download.
+> 2. Clones the repository or downloads the release ZIP if Git is not installed.
+> 3. Creates `.venv`, upgrades pip, and installs all dependencies in editable mode.
+> 4. Fetches the MediaPipe Hand Landmarker and Piper TTS voice models.
+> 5. Launches the interactive setup wizard and creates Desktop & Start Menu shortcuts (`SignLang.lnk`).
 
-1. **Python 3.11 Auto-Resolution**: Checks for Python 3.11. If absent, installs via non-admin `winget` or downloads official Python 3.11 with `/quiet InstallAllUsers=0 PrependPath=1`.
-2. **Git & Repository Extraction**: Clones via Git, or downloads and extracts the release ZIP using PowerShell `Expand-Archive`.
-3. **Isolated Virtual Environment**: Creates `.venv`, upgrades pip, and installs all dependencies in editable mode (`pip install -e .` + `rich`).
-4. **Model Bundle Fetch**: Automatically fetches `hand_landmarker.task` (~7.8 MB) and Piper neural voice ONNX (~61 MB).
-5. **Interactive TUI Wizard**: Launches the gradient ASCII installer, probes webcams, configures modes, creates **Desktop** & **Start Menu** shortcuts (`SignLang.lnk`), and runs the self-test.
-6. **Desktop Launcher**: Double-click `signlang.bat` anytime to launch!
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                       Target Environment Check                              │
+│  Operating System    : Windows 11 (win32, x86_64)                           │
+│  Camera Backend      : DirectShow (Unbuffered cv2.CAP_DSHOW)                │
+│  Vision Landmarker   : MediaPipe Tasks API (hand_landmarker.task)           │
+│  ISL Live Inference  : Pure NumPy Forward Pass (<0.05 ms per frame)         │
+│  Kiosk Browser       : Microsoft Edge (msedge.exe --app)                    │
+│  Desktop Shortcuts   : Desktop\SignLang.lnk & Start Menu\SignLang.lnk       │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-</details>
-
----
-
-### 🐧 Linux (Arch / Omarchy / Ubuntu / Debian / macOS)
-
-Run the native Linux bootstrap script:
+### 🐧 Linux (Arch / Omarchy / Ubuntu / Debian)
+Run in your terminal:
 
 ```bash
 git clone https://github.com/RAZOR-NINJAS/signlang.git
@@ -85,115 +79,32 @@ cd signlang
 
 ---
 
-### 💻 Manual Installation (Step-by-Step)
+## 🩺 System Doctor (`signlang doctor`)
 
-<details>
-<summary><b>Manual Windows (PowerShell / Command Prompt)</b></summary>
-
-```powershell
-# 1. Clone source repository
-git clone https://github.com/RAZOR-NINJAS/signlang.git
-cd signlang
-
-# 2. Initialize Python 3.11 virtual environment
-py -3.11 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-
-# 3. Install dependencies
-python -m pip install --upgrade pip
-pip install -e .
-pip install rich
-
-# 4. Fetch MediaPipe landmarker and Piper TTS models
-python scripts\fetch_models.py
-
-# 5. Run diagnostic healthcheck
-python main.py doctor
-
-# 6. Launch SignLang (ISL primary mode)
-.\signlang.bat
-```
-
-</details>
-
-<details>
-<summary><b>Manual Linux / macOS (Terminal)</b></summary>
+SignLang includes an integrated healthcheck and diagnostic utility to verify all subsystems at any time:
 
 ```bash
-# 1. Clone source repository
-git clone https://github.com/RAZOR-NINJAS/signlang.git
-cd signlang
-
-# 2. Initialize virtual environment (Python 3.11 or 3.12)
-python3 -m venv .venv
-source .venv/bin/activate
-
-# 3. Install in editable mode
-pip install --upgrade pip
-pip install -e .
-pip install rich
-
-# 4. Fetch models
-python scripts/fetch_models.py
-
-# 5. Run diagnostic healthcheck
 python main.py doctor
-
-# 6. Launch SignLang
-python main.py
 ```
 
-</details>
-
----
-
-## 🎨 Interactive Setup Wizard & System Doctor
-
-### 1. Interactive Setup Wizard (`scripts/install_tui.py`)
-
-Run `python scripts/install_tui.py` (or `python scripts/install_tui.py --yes` for silent unattended installs):
-
-```
-  ███████╗██╗ ██████╗ ███╗   ██╗██╗      █████╗ ███╗   ██╗ ██████╗ 
-  ██╔════╝██║██╔════╝ ████╗  ██║██║     ██╔══██╗████╗  ██║██╔════╝ 
-  ███████╗██║██║  ███╗██╔██╗ ██║██║     ███████║██╔██╗ ██║██║  ███╗
-  ╚════██║██║██║   ██║██║╚██╗██║██║     ██╔══██║██║╚██╗██║██║   ██║
-  ███████║██║╚██████╔╝██║ ╚████║███████╗██║  ██║██║ ╚████║╚██████╔╝
-  ╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═══╝ ╚═════╝ 
-
-       Real-Time Sign Language Translator (ISL • ASL • Words • Shadow Play)
-
-┌────────────────────────┬─────────────────────────────────────────────────────┐
-│ Operating System       │ Windows 10/11 (win32, x86_64)                       │
-│ Python Runtime         │ 3.11.9 (C:\Users\User\Projects\signlang\.venv)     │
-│ Video Backend          │ DirectShow (cv2.CAP_DSHOW)                          │
-│ Kiosk Browser          │ msedge.exe                                          │
-└────────────────────────┴─────────────────────────────────────────────────────┘
-```
-
----
-
-### 2. Comprehensive System Doctor (`signlang doctor`)
-
-Run `python main.py doctor` or `signlang doctor` anytime to evaluate system health:
-
-```
+```text
 === SignLang System Doctor & Compatibility Diagnostics ===
 
-┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
-┃ Category       ┃ Component                  ┃ Status     ┃ Details                    ┃
-┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
-│ Environment    │ Python Runtime             │ PASS       │ 3.11.9 (venv active)       │
-│ Environment    │ Operating System           │ PASS       │ Windows 11 (DirectShow)    │
-│ Hardware       │ Webcam Capture             │ PASS       │ Cam 0 (640x480) unbuffered │
-│ Vision         │ MediaPipe Landmarker       │ PASS       │ Tasks API verified         │
-│ Models         │ ISL Mode (Two-Handed)      │ PASS       │ Trained weights present    │
-│ Models         │ ASL Letters Mode           │ PASS       │ signs_mlp.pt present       │
-│ Models         │ ASL Words Mode             │ PASS       │ Classifier present         │
-│ Audio          │ Text-to-Speech (Piper)     │ PASS       │ Piper ONNX & Audio output  │
-│ Display        │ Browser Kiosk (Game Mode)  │ PASS       │ Detected: msedge.exe       │
-│ Network        │ Localhost Loopback         │ PASS       │ Loopback socket verified   │
-└────────────────┴────────────────────────────┴────────────┴────────────────────────────┘
+┏━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Category       ┃ Component                  ┃ Status     ┃ Details                        ┃
+┡━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ Environment    │ Python Runtime             │ PASS       │ 3.11.16 (Supported: 3.11-3.12) │
+│ Environment    │ Operating System           │ PASS       │ Windows / Linux (x86_64)       │
+│ Hardware       │ Webcam Capture             │ PASS       │ Found camera(s) via DirectShow │
+│ Vision         │ MediaPipe Landmarker       │ PASS       │ Loaded hand_landmarker.task    │
+│ Models         │ ISL Mode (Two-Handed)      │ PASS       │ Trained weights (isl_mlp.pt)   │
+│ Models         │ ASL Letters Mode           │ PASS       │ Weights present (signs_mlp.pt) │
+│ Models         │ ASL Words Mode             │ PASS       │ Classifier present (.npz)      │
+│ Audio          │ Text-to-Speech (Piper)     │ PASS       │ Piper voice model & audio ready│
+│ Display        │ Browser Kiosk (Game Mode)  │ PASS       │ Detected Edge/Chrome kiosk exe │
+│ Network        │ Localhost Loopback         │ PASS       │ Loopback stack operational     │
+└────────────────┴────────────────────────────┴────────────┴────────────────────────────────┘
+
 All core systems are operational and ready for use!
 ```
 
@@ -253,6 +164,16 @@ flowchart TD
 
 ## 🎯 Operational Subsystems & Modes
 
+| Subsystem Mode | Hands | Technology Stack | Latency | Default Command |
+| :--- | :---: | :--- | :---: | :--- |
+| **ISL Mode (Primary)** | **2** | MediaPipe Tasks (num_hands=2) + 164-dim Pure NumPy MLP | **<0.05 ms** | `python main.py` or double-click `signlang.bat` |
+| **ASL Fingerspelling** | **1** | MediaPipe Tasks + 74-dim PyTorch MLP (`signs_mlp.pt`) | **<0.10 ms** | `python main.py --mode letters` |
+| **ASL Dynamic Words** | **1-2** | MediaPipe Holistic + Dynamic Time Warping (DTW) + $k$-NN | **~20.1 ms** | `python main.py --mode words live` |
+| **Sign Dino Game** | **1** | Chrome/Edge Kiosk + Decoupled 60Hz HTML5 Canvas Engine | **60 FPS** | `python main.py --mode game --kiosk` |
+| **System Diagnostics** | — | Hardware probe, model validator, port checker | **<1.0 s** | `python main.py doctor` |
+
+---
+
 ### 1. Indian Sign Language (ISL Mode — Primary Default)
 * **Default Invocation**: `python main.py` or double-clicking `signlang.bat`.
 * **Standard Grounding**: Based on the standardized manual alphabet established by the **Indian Sign Language Research and Training Centre (ISLRTC)**, DEPwD, Govt. of India.
@@ -270,6 +191,39 @@ flowchart TD
   * **STOP** (1 hand): Open flat palm facing forward toward camera.
 * **164-Dimensional Feature Representation**: Canonicalizes hand slots (`slot_left`, `slot_right`), computes 74 invariant geometric features per hand, zero-imputes absent hands, adds 14 inter-hand interaction features (wrist offset, inter-palm distance, fingertip proximities), and 2 hand-presence indicator flags.
 * **Pure NumPy Live Inference**: Executes live HUD classification via an ultra-fast NumPy forward pass (`<0.05 ms`), eliminating PyTorch memory and thermal overhead on constrained laptops.
+
+<details>
+<summary><b>📖 Official ISLRTC Two-Handed Alphabet Reference Specifications (Click to expand)</b></summary>
+
+| Letter | Hands | Type | Verified Technical Description | Standard Citation |
+| :---: | :---: | :---: | :--- | :--- |
+| **A** | 2 | Static | Dominant index finger touches thumb tip of non-dominant open hand. | ISLRTC Manual Alphabet Chart (DEPwD, Govt. of India) |
+| **B** | 2 | Static | Dominant thumb & index form loop touching base thumb & index loop ("glasses"). | ISLRTC Manual Alphabet Chart; Vikaspedia |
+| **C** | 1 | Static | Dominant hand curves thumb and fingers into a C-shape held in view. | ISLRTC Manual Alphabet Chart; iSign Benchmark |
+| **D** | 2 | Static | Dominant index finger and thumb curved to touch non-dominant vertical index finger. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **E** | 2 | Static | Dominant index finger touches index fingertip of non-dominant open hand. | ISLRTC Manual Alphabet Chart; Vikaspedia |
+| **F** | 2 | Static | Dominant index and middle fingers laid across non-dominant index and middle fingers. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **G** | 2 | Static | Both hands formed into fists held with knuckles touching horizontally. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **H** | 2 | Static | Dominant flat palm placed horizontally across non-dominant flat palm. | ISLRTC Manual Alphabet Chart |
+| **I** | 2 | Static | Dominant index finger touches middle fingertip of non-dominant open hand. | ISLRTC Manual Alphabet Chart (2-handed vowel) |
+| **K** | 2 | Static | Dominant index finger crooked and placed against non-dominant vertical index. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **L** | 1/2 | Static | Dominant hand forms L-shape with thumb and index held upright. | ISLRTC Manual Alphabet Chart |
+| **M** | 2 | Static | Dominant hand places 3 fingers (index, middle, ring) onto base open palm. | ISLRTC Manual Alphabet Chart; Vikaspedia |
+| **N** | 2 | Static | Dominant hand places 2 fingers (index, middle) onto base open palm. | ISLRTC Manual Alphabet Chart; Vikaspedia |
+| **O** | 2 | Static | Dominant index finger touches ring fingertip of non-dominant open hand. | ISLRTC Manual Alphabet Chart (2-handed vowel) |
+| **P** | 2 | Static | Dominant index and thumb form a loop touching tip of vertical index finger. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **Q** | 2 | Static | Dominant index and thumb circle hooked over base of vertical index finger. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **R** | 2 | Static | Dominant crooked index finger placed flat onto palm of non-dominant hand. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **S** | 2 | Static | Dominant crooked index finger hooked around pinky of non-dominant hand. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **T** | 2 | Static | Dominant index finger touches edge of non-dominant hand near index base. | ISLRTC Manual Alphabet Chart; Vikaspedia |
+| **U** | 2 | Static | Dominant index finger touches pinky fingertip of non-dominant open hand. | ISLRTC Manual Alphabet Chart (2-handed vowel) |
+| **V** | 1/2 | Static | Dominant hand forms V with index and middle fingers, held upright. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **W** | 2 | Static | Both hands held with fingers interlocked or thumbs/fingers meeting to form "W". | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **X** | 2 | Static | Both index fingers extended and crossed over each other. | ISLRTC Manual Alphabet Chart; Vikaspedia |
+| **Y** | 2 | Static | Dominant index finger placed into V-crotch between thumb and index of base hand. | ISLRTC Manual Alphabet Chart (DEPwD) |
+| **SPACE**| 2 | Static | Both open palms held facing camera at chest level, fingers extended upright. | SignLang Non-Colliding ISL Spatial Standard |
+
+</details>
 
 ---
 
@@ -291,25 +245,26 @@ flowchart TD
 ---
 
 ### 4. Interactive Browser Shadow-Play Game (`Sign Dino`)
-* **Invocation**: `python main.py --mode game` (or `python main.py --mode game --kiosk` for fullscreen kiosk mode).
-* **Mechanism**: Chrome Dino-style obstacle runner game hosted via Python's standard library HTTP server at `http://localhost:8000`.
-* **Kiosk Launcher**: Automatically launches **Microsoft Edge** (`msedge.exe`) or **Google Chrome** in `--app` or `--kiosk` fullscreen mode without address bars or distractions.
-* **Mobile / Tablet Streaming**: Run `python main.py --mode game --host=0.0.0.0 --port=8080` to play on phones or iPads over local Wi-Fi while your computer's webcam tracks hand gestures.
 
 <div align="center">
 
+<img src="docs/assets/dino_logo.png" alt="Sign Dino Game Logo" width="120" />
+
+### 🦖 Sign Dino — Reflex Fingerspelling Runner
+
 | 🎮 Active Challenge: Sign to Leap | 💥 Collision & Diagnostic Analysis |
 | :---: | :---: |
-| <img src="docs/assets/gameplay_preview.png" alt="Sign Dino Gameplay Screen" width="540" /> | <img src="docs/assets/gameover_preview.png" alt="Sign Dino Game Over Screen" width="540" /> |
+| <img src="docs/assets/gameplay_preview.png" alt="Sign Dino Gameplay Screen" width="520" /> | <img src="docs/assets/gameover_preview.png" alt="Sign Dino Game Over Screen" width="520" /> |
+| *Sign the prompted letter (e.g. **Y**) within the countdown bar to jump.* | *Post-run diagnostic highlighting the missed sign for targeted retraining.* |
 
 </div>
 
----
-
-### 5. Asynchronous Neural Text-to-Speech Engine
-* **Synthesis Engine**: Offline neural speech generation powered by Piper ONNX (`en_US-lessac-medium.onnx`).
-* **Zero-Latency In-Memory Audio Cache**: Pre-synthesizes letter pronunciations (A–Z, SPACE, BACKSPACE) into RAM during initialization, eliminating audio buffer latency during live signing.
-* **Full Transcript Narration**: Pressing **`R`** triggers immediate synthesis and playback of the entire accumulated text buffer.
+* **Launch Command**:
+  ```bash
+  python main.py --mode game --kiosk
+  ```
+* **Kiosk Launcher**: Automatically launches **Microsoft Edge** (`msedge.exe`) or **Google Chrome** in `--app` or `--kiosk` fullscreen mode without address bars or distractions.
+* **Mobile / Tablet Streaming**: Run `python main.py --mode game --host=0.0.0.0 --port=8080` to play on phones or iPads over local Wi-Fi while your computer's webcam tracks hand gestures.
 
 ---
 
@@ -327,6 +282,68 @@ flowchart TD
 | **`Backspace` Key** | Manual Erase | Deletes the last character in the buffer. |
 | **`F` Key** | Fullscreen Toggle | Toggles runtime fullscreen mode without aspect ratio distortion or pixel scaling defects. |
 | **`Q` / `Esc` Key** | Graceful Termination | Releases camera descriptors, closes OpenCV windows, and safely joins TTS worker threads. |
+
+---
+
+## 💻 Manual Installation Reference
+
+<details>
+<summary><b>Manual Windows Installation (PowerShell)</b></summary>
+
+```powershell
+# 1. Clone source repository
+git clone https://github.com/RAZOR-NINJAS/signlang.git
+cd signlang
+
+# 2. Create isolated Python 3.11 virtual environment
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+
+# 3. Upgrade pip and install signlang
+python -m pip install --upgrade pip
+pip install -e .
+pip install rich
+
+# 4. Fetch MediaPipe landmark models and Piper neural TTS voice
+python scripts\fetch_models.py
+
+# 5. Run diagnostic self-test
+python main.py doctor
+
+# 6. Launch SignLang
+.\signlang.bat
+```
+
+</details>
+
+<details>
+<summary><b>Manual Linux / macOS Installation (Bash)</b></summary>
+
+```bash
+# 1. Clone source repository
+git clone https://github.com/RAZOR-NINJAS/signlang.git
+cd signlang
+
+# 2. Initialize virtual environment (Python 3.11 or 3.12)
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 3. Install in editable mode
+pip install --upgrade pip
+pip install -e .
+pip install rich
+
+# 4. Fetch models
+python scripts/fetch_models.py
+
+# 5. Run diagnostic self-test
+python main.py doctor
+
+# 6. Launch SignLang (ISL primary mode)
+python main.py
+```
+
+</details>
 
 ---
 
@@ -360,14 +377,10 @@ The application behavior can be customized via environment variables:
 | `SIGNLANG_DOMINANT` | `right` | Dominant hand for ISL signing (`right` or `left`). Mapped canonically with mirror augmentation for left-handed signers. |
 | `SIGNLANG_TTS` | `1` | Enables real-time text-to-speech audio feedback. Set to `0` to run in silent mode. |
 | `SIGNLANG_MIRROR` | `1` | Horizontally mirrors video feed to provide a natural selfie mirror view. Set to `0` to disable. |
-| `SIGNLANG_MAX_HANDS` | `1` | Maximum concurrent hands tracked (automatically set to `2` in ISL mode). |
+| `SIGNLANG_MAX_HANDS` | `1` | Maximum concurrent hands tracked by MediaPipe (automatically `2` in ISL mode). |
 
 ---
 
 ## 📜 License
 
 Distributed under the terms of the **MIT License**. Refer to [`LICENSE`](LICENSE) for complete legal terms.
-
-<div align="center">
-<sub>Engineered with ❤️ by RAZOR-NINJAS for accessible, real-time sign language recognition on everyday edge hardware.</sub>
-</div>
