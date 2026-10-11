@@ -13,11 +13,12 @@
 
 ## 📌 Executive Summary
 
-**SignLang** is a high-throughput, edge-native American Sign Language (ASL) fingerspelling and dynamic word-sign translation engine. Hardware-accelerated via an active GPU delegate (OpenGL/EGL) with resilient CPU fallback, the system executes 100% locally with zero cloud dependencies or network overhead.
+**SignLang** is a high-throughput, edge-native sign language translation engine with **Indian Sign Language (ISL)** as its primary mode alongside American Sign Language (ASL) fingerspelling and dynamic word-sign translation. Hardware-accelerated via an active GPU delegate (OpenGL/EGL) with resilient CPU fallback, the system executes 100% locally with zero cloud dependencies or network overhead.
 
 ### Core Architectural Pillars
+* **Primary ISL Two-Hand Mode**: Standardized on the ISLRTC manual alphabet, tracking both hands concurrently with 164-dimensional geometric and interaction features.
 * **Hardware-Accelerated Computer Vision**: Leverages MediaPipe with an active GPU delegate (OpenGL/EGL) for 3D hand tracking at minimal CPU utilization.
-* **Dual-Inference Machine Learning**: Combines a PyTorch Multi-Layer Perceptron (MLP) for discrete fingerspelling with Dynamic Time Warping (DTW) and $k$-NN for dynamic sign gestures.
+* **Dual-Inference Machine Learning**: Combines ultra-lightweight pure NumPy inference for ISL with PyTorch MLPs and Dynamic Time Warping (DTW) + $k$-NN for dynamic sign gestures.
 * **Deterministic Temporal Stabilization**: Employs finite-state dwell timers and multi-frame smoothing algorithms to eliminate prediction jitter during hand transitions.
 * **Multi-Modal Zero-Latency Feedback**: Pairs a real-time OpenCV HUD overlay with an in-memory asynchronous Piper Neural Text-to-Speech (TTS) engine.
 * **Strict Biometric Privacy**: Retains zero images or raw video frames on disk; all training and inference operates exclusively on normalized 3D landmark vectors.

@@ -67,6 +67,7 @@ def main(argv=None):
             """
 signlang - real-time ASL fingerspelling and word-sign translator
 
+  signlang isl        Indian Sign Language (ISL) recognition (primary mode)
   signlang collect    record training samples from your webcam
   signlang train      train the classifier on recorded samples
   signlang live        terminal recognition (no browser needed)

@@ -65,7 +65,7 @@ def test_main_dispatcher_help_works():
         text=True,
         check=True,
     )
-    assert "SignLang: Real-time ASL fingerspelling" in result.stdout
+    assert "SignLang: Real-time" in result.stdout
     assert "--mode {" in result.stdout
     assert "letters" in result.stdout and "words" in result.stdout
 
@@ -105,17 +105,17 @@ def test_main_dispatcher_words_subcommands_help():
 
 
 def test_main_dispatcher_default_mode_never_imports_words():
-    """Verify that main.py default mode (letters) never imports words."""
+    """Verify that main.py default mode never imports words."""
     code = """
 import sys
 from unittest.mock import patch
 
-with patch("signlang.live.main", return_value=0):
+with patch("isl.live.main", return_value=0), patch("signlang.live.main", return_value=0):
     import main
     exit_code = main.dispatch([])
     assert exit_code == 0
     words_modules = [m for m in sys.modules if m == "words" or m.startswith("words.")]
-    assert len(words_modules) == 0, f"Words imported in default letters mode: {words_modules}"
+    assert len(words_modules) == 0, f"Words imported in default mode: {words_modules}"
     print("Default mode isolation passed.")
 """
     result = subprocess.run(

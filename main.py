@@ -17,14 +17,14 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
     """Parse dispatcher arguments and run the chosen mode."""
     parser = argparse.ArgumentParser(
         prog="main.py",
-        description="SignLang: Real-time ASL fingerspelling (letters) and motion signs (words).",
+        description="SignLang: Real-time sign language recognition engine (ISL mode primary, ASL letters & words).",
         add_help=False,  # Allow --help to be handled or passed through
     )
     parser.add_argument(
         "--mode",
-        choices=["letters", "words", "game", "isl"],
-        default="letters",
-        help="Recognition mode: 'letters' (fingerspelling), 'words' (holistic signs), 'game' (shadow-play), or 'isl' (Indian Sign Language). Default: letters.",
+        choices=["isl", "letters", "words", "game"],
+        default="isl",
+        help="Recognition mode: 'isl' (Indian Sign Language, default), 'letters' (ASL fingerspelling), 'words' (ASL holistic signs), or 'game' (shadow-play). Default: isl.",
     )
     parser.add_argument(
         "--source",
@@ -43,16 +43,14 @@ def dispatch(argv: Optional[List[str]] = None) -> int:
         if not rest:
             parser.print_help()
             print("\nExamples:")
-            print("  python main.py                      # Run letters live recognition (default)")
-            print("  python main.py --mode letters       # Run letters mode")
-            print("  python main.py --mode words         # Run words live mode")
-            print("  python main.py --mode words record  # Record words sequences")
-            print("  python main.py --mode words eval    # Evaluate words model")
+            print("  python main.py                      # Run ISL live recognition (default)")
+            print("  python main.py collect              # Record ISL two-handed samples (default mode)")
+            print("  python main.py train                # Train ISL classifier (default mode)")
+            print("  python main.py eval                 # Evaluate ISL model (default mode)")
+            print("  python main.py --mode isl           # Explicit ISL live recognition")
+            print("  python main.py --mode letters       # Run ASL letters mode")
+            print("  python main.py --mode words         # Run ASL words live mode")
             print("  python main.py --mode game          # Run shadow-play Dino game")
-            print("  python main.py --mode isl           # Run ISL live recognition")
-            print("  python main.py --mode isl collect   # Record ISL two-handed samples")
-            print("  python main.py --mode isl train     # Train ISL classifier")
-            print("  python main.py --mode isl eval      # Evaluate ISL model")
             return 0
         else:
             rest = list(rest) + ["--help"]
