@@ -25,11 +25,17 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
+      - name: Install System Libraries (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y libportaudio2 libgl1
+
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install pytest rich
+          python -m pip install pytest rich scikit-learn
 
       - name: Fetch Required Test Models
         run: |

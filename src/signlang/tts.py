@@ -23,8 +23,10 @@ try:
     from piper import PiperVoice
 
     _HAS_TTS_LIBS = True
-except ImportError:
+except (ImportError, OSError):
     _HAS_TTS_LIBS = False
+    sd = None
+    PiperVoice = None
 
 
 class TTSEngine:
