@@ -104,7 +104,10 @@ def check_mediapipe_landmarker() -> DoctorCheck:
         from mediapipe.tasks.python import vision
 
         options = vision.HandLandmarkerOptions(
-            base_options=mpp.BaseOptions(model_asset_path=str(model_path)),
+            base_options=mpp.BaseOptions(
+                model_asset_path=str(model_path),
+                delegate=mpp.BaseOptions.Delegate.CPU,
+            ),
             running_mode=vision.RunningMode.IMAGE,
         )
         landmarker = vision.HandLandmarker.create_from_options(options)

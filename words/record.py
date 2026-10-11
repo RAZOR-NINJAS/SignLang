@@ -82,7 +82,15 @@ def record_webcam(
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT)
 
-    mp_holistic = mp.solutions.holistic
+    try:
+        import mediapipe.python.solutions.holistic as mp_holistic
+    except (ImportError, AttributeError):
+        mp_holistic = getattr(getattr(mp, "solutions", None), "holistic", None)
+
+    if mp_holistic is None:
+        print("Error: MediaPipe Holistic solutions module not available in this mediapipe build.")
+        return 1
+
     holistic = mp_holistic.Holistic(
         model_complexity=MODEL_COMPLEXITY,
         min_detection_confidence=MIN_DETECTION_CONFIDENCE,
