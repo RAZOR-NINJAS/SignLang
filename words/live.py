@@ -354,7 +354,19 @@ def run_live(
 
     # Open Video Source
     src_val = int(source) if source.isdigit() else source
-    cap = cv2.VideoCapture(src_val)
+    if isinstance(src_val, int) and sys.platform == "win32":
+        cap = cv2.VideoCapture(src_val, cv2.CAP_DSHOW)
+        if not cap.isOpened():
+            cap.release()
+            cap = cv2.VideoCapture(src_val)
+    elif isinstance(src_val, int) and sys.platform.startswith("linux"):
+        cap = cv2.VideoCapture(src_val, cv2.CAP_V4L2)
+        if not cap.isOpened():
+            cap.release()
+            cap = cv2.VideoCapture(src_val)
+    else:
+        cap = cv2.VideoCapture(src_val)
+
     if not cap.isOpened():
         print(f"Error: Could not open video source {source!r}")
         print("Tip: If running without a webcam, test with a recorded video or words.eval.")

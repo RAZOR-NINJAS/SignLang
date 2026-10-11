@@ -18,6 +18,7 @@ from .config import (
     MIRROR,
     SOURCE,
 )
+from .platform_compat import get_camera_capture
 
 
 def _create_landmarker(delegate, num_hands=MAX_HANDS) -> "vision.HandLandmarker":
@@ -78,15 +79,12 @@ class HandPipeline:
         self._thread.start()
 
     def _open(self):
-        if isinstance(self.source, int) or str(self.source).isdigit():
-            cap = cv2.VideoCapture(int(self.source))
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, CAPTURE_WIDTH)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, CAPTURE_HEIGHT)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        else:
-            cap = cv2.VideoCapture(self.source, cv2.CAP_FFMPEG)
-            cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
-        return cap
+        return get_camera_capture(
+            source=self.source,
+            width=CAPTURE_WIDTH,
+            height=CAPTURE_HEIGHT,
+            buffer_size=1,
+        )
 
     def _capture_loop(self):
         cap = None

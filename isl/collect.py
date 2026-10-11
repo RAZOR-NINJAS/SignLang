@@ -1,20 +1,17 @@
 """Interactive data collection for Indian Sign Language (ISL) two-handed signs."""
 
 import argparse
-import select
 import shutil
 import sys
 import tempfile
 import time
 from typing import List, Optional
 
-if sys.platform == "win32":
-    import msvcrt
-
 import cv2
 import numpy as np
 
 from signlang.hands import HandPipeline, draw_landmarks
+from signlang.keyboard import is_interactive, poll_stdin_keys
 
 from . import dataset
 from .config import (
@@ -29,26 +26,6 @@ from .features import extract_features
 BURSTS_PER_LABEL = 4
 WINDOW = "signlang - ISL collect"
 BAR_H = 150
-
-
-def poll_stdin_keys():
-    """Non-blocking terminal key reader."""
-    keys = []
-    try:
-        if sys.stdin is None or not sys.stdin.isatty():
-            return keys
-        if sys.platform == "win32":
-            while msvcrt.kbhit():
-                keys.append(msvcrt.getwche())
-            return keys
-        while select.select([sys.stdin], [], [], 0)[0]:
-            ch = sys.stdin.read(1)
-            if not ch:
-                break
-            keys.append(ch)
-    except (ValueError, OSError):
-        pass
-    return keys
 
 
 def _panel(frame, lines, origin_y=None):
