@@ -86,3 +86,23 @@
   5. Updated `README.md`: added detailed Windows 10/11 one-liner PowerShell install instructions (`irm ... | iex`), manual steps, Linux installer details, and doctor documentation.
 - **What is blocked**: None.
 - **What is next**: Orchestrator final integration pass and full regression test execution.
+
+---
+
+### Section A: Flagship README & Custom Visual Assets
+- **Status**: Completed
+- **What was done**:
+  1. Hand-crafted responsive animated SVG banners in `assets/`:
+     - `assets/banner-dark.svg`: Obsidian slate background, cyber grid, glowing neon hand landmark constellation with pulsating fingertip nodes, live tracking coordinates, and key feature badges.
+     - `assets/banner-light.svg`: Crisp light theme with high-contrast typography, blueprint grid, and matching gradient styling.
+     - Embedded using GitHub-compliant `<picture>` element with `prefers-color-scheme` media queries for automatic dark/light theme switching.
+  2. Built centered ASCII art header with bold tagline, shields.io badges (CI, Python 3.11, Platforms, License, Privacy, Compute, Stars), and quick-nav links.
+  3. Created 3 punchy "Why SignLang" value pillars and a 3x2 responsive HTML feature matrix.
+  4. Structured copy-paste one-liner installation blocks for Windows (PowerShell non-admin) and Linux, with expandable `<details>` manual developer setup.
+  5. Built GitHub-rendered Mermaid architecture flowchart tracing the pipeline from camera hardware through MediaPipe, feature extraction, MLP/DTW classification, debounce, and Piper TTS.
+  6. Added comprehensive keyboard controls table, low-spec budget laptop optimizations, project tree, expandable `signlang doctor` sample output, and contributing/license sections.
+  7. Generated valid animated demo placeholder GIFs in `assets/` (`demo-isl.gif`, `demo-asl.gif`, `demo-words.gif`, `demo-installer.gif`, `demo-doctor.gif`) and documented screen recording instructions.
+  8. Pinned `mediapipe==0.10.21` in `pyproject.toml` and added `scikit-learn>=1.3` to eliminate CI upstream deprecation issues across platforms.
+- **What is blocked**: None.
+- **What is next**: Section B: Installer TUI (`scripts/install_tui.py`).
+
